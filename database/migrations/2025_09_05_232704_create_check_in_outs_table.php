@@ -43,6 +43,6 @@ return new class extends Migration
      */
     public function down(): void
     {
-        Schema::dropIfExists('check_in_outs');
+        Schema::dropIfExists('check_in_out');
     }
 };

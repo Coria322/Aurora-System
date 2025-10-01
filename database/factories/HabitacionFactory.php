@@ -2,22 +2,22 @@
 
 namespace Database\Factories;
 
+use App\Models\Habitacion;
+use App\Models\TipoHabitacion;
 use Illuminate\Database\Eloquent\Factories\Factory;
 
-/**
- * @extends \Illuminate\Database\Eloquent\Factories\Factory<\App\Models\Habitacion>
- */
 class HabitacionFactory extends Factory
 {
-    /**
-     * Define the model's default state.
-     *
-     * @return array<string, mixed>
-     */
+    protected $model = Habitacion::class;
+
     public function definition(): array
     {
         return [
-            //
+            'numero_habitacion' => $this->faker->unique()->numberBetween(100, 999),
+            'id_tipo_habitacion' => TipoHabitacion::factory(),
+            'estado' => $this->faker->randomElement(['disponible','ocupada','no disponible']),
+            'piso' => $this->faker->numberBetween(1, 10),
+            'descripcion' => $this->faker->optional()->sentence(8),
         ];
     }
 }

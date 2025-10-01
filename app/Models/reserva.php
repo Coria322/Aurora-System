@@ -56,11 +56,11 @@ class Reserva extends Model
 
     public function servicios()
     {
-        return $this->hasMany(ReservaServicio::class, 'id_reserva', 'id_reserva');
+        return $this->hasMany(reserva_servicio::class, 'id_reserva', 'id_reserva');
     }
 
     public function checkInOuts()
     {
-        return $this->hasMany(CheckInOut::class, 'id_reserva', 'id_reserva');
+        return $this->hasMany(check_in_out::class, 'id_reserva', 'id_reserva');
     }
 }

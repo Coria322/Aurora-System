@@ -5,8 +5,62 @@ namespace App\Models;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 
-class reserva extends Model
+class Reserva extends Model
 {
-    /** @use HasFactory<\Database\Factories\ReservaFactory> */
     use HasFactory;
+
+    protected $table = 'reservas';
+    protected $primaryKey = 'id_reserva';
+
+    protected $fillable = [
+        'id_huesped',
+        'id_usuario',
+        'fecha_checkin',
+        'fecha_checkout',
+        'cantidad_personas',
+        'estado',
+        'subtotal',
+        'impuestos',
+        'total',
+        'observaciones',
+    ];
+
+    protected $casts = [
+        'fecha_checkin' => 'date',
+        'fecha_checkout' => 'date',
+        'subtotal' => 'decimal:2',
+        'impuestos' => 'decimal:2',
+        'total' => 'decimal:2',
+    ];
+
+    // Relaciones
+    public function huesped()
+    {
+        return $this->belongsTo(Huesped::class, 'id_huesped', 'id_huesped');
+    }
+
+    public function user()
+    {
+        return $this->belongsTo(User::class, 'id_usuario', 'id_usuario');
+    }
+
+    public function detalleReservas()
+    {
+        return $this->hasMany(DetalleReserva::class, 'id_reserva', 'id_reserva');
+    }
+
+    public function pagos()
+    {
+        return $this->hasMany(Pago::class, 'id_reserva', 'id_reserva');
+    }
+
+    public function servicios()
+    {
+        return $this->hasMany(ReservaServicio::class, 'id_reserva', 'id_reserva');
+    }
+
+    public function checkInOuts()
+    {
+        return $this->hasMany(CheckInOut::class, 'id_reserva', 'id_reserva');
+    }
 }

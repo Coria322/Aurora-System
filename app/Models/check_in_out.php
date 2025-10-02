@@ -12,6 +12,8 @@ class check_in_out extends Model
     protected $table = 'check_in_out';
     protected $primaryKey = 'id_check';
 
+    public $timestamps = false;
+
     protected $fillable = [
         'id_reserva',
         'id_usuario',

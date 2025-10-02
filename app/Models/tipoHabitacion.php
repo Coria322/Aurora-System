@@ -12,6 +12,10 @@ class TipoHabitacion extends Model
     protected $table = 'tipo_habitaciones';
     protected $primaryKey = 'id_tipo_habitacion';
 
+    public $timestamps = false;
+
+
+
     protected $fillable = [
         'nombre',
         'descripcion',

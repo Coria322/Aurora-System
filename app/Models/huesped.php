@@ -12,6 +12,8 @@ class huesped extends Model
     protected $table = 'huespedes';
     protected $primaryKey = 'id_huesped';
 
+    public $timestamps = false;
+    
     protected $fillable = [
         'nombre',
         'apellido_paterno',

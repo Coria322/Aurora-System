@@ -12,6 +12,8 @@ class reserva_servicio extends Model
     protected $table = 'reservas_servicios';
     protected $primaryKey = 'id_reserva_servicio';
 
+    public $timestamps = false;
+
     protected $fillable = [
         'id_reserva',
         'id_servicio',

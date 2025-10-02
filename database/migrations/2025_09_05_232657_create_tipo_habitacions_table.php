@@ -13,7 +13,7 @@ return new class extends Migration
     {
         Schema::create('tipo_habitaciones', function (Blueprint $table) {
             
-            $table->id('id_tipo_habitacion')->primary();
+            $table->id('id_tipo_habitacion');
             $table->string('nombre')->unique();
             $table->string('descripcion')->nullable();
             $table->integer('capacidad_maxima');

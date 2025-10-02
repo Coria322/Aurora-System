@@ -17,10 +17,19 @@ class User extends Authenticatable
      *
      * @var list<string>
      */
+    
+    protected $table = 'users';
+    protected $primaryKey = 'id_usuario';
+    
     protected $fillable = [
         'name',
+        'apellido_paterno',
+        'apellido_materno',
         'email',
+        'telefono',
+        'tipo_usuario',
         'password',
+        'activo'
     ];
 
     /**
@@ -44,5 +53,11 @@ class User extends Authenticatable
             'email_verified_at' => 'datetime',
             'password' => 'hashed',
         ];
+    }
+
+    // Relaciones
+    public function reservas()
+    {
+        return $this->hasMany(Reserva::class, 'id_usuario', 'id_usuario');
     }
 }

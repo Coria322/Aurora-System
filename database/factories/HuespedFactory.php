@@ -18,9 +18,9 @@ class HuespedFactory extends Factory
             'documento_identidad' => $this->faker->numerify('##########'),
             'tipo_documento' => $this->faker->randomElement(['INE', 'Pasaporte', 'Cédula Profesional', 'Otro']),
             'telefono' => $this->faker->optional()->numerify('55#######'),
-            'email' => $this->faker->optional()->unique()->safeEmail(),
+            'email' => $this->faker->unique()->optional()->safeEmail(),
             'fecha_nacimiento' => $this->faker->date('Y-m-d', '-18 years'),
-            'direccion' => $this->faker->streetAddress(),
+            'direccion' => substr($this->faker->address(),20),
             'ciudad' => $this->faker->city(),
             'pais' => $this->faker->country(),
         ];

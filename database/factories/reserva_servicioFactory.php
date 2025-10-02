@@ -3,12 +3,13 @@
 namespace Database\Factories;
 
 use App\Models\Reserva;
+use App\Models\reserva_servicio;
 use App\Models\servicio;
 use Illuminate\Database\Eloquent\Factories\Factory;
 
-class ReservaServicioFactory extends Factory
+class Reserva_ServicioFactory extends Factory
 {
-    protected $model = servicio::class;
+    protected $model = reserva_servicio::class;
 
     public function definition(): array
     {
@@ -17,8 +18,8 @@ class ReservaServicioFactory extends Factory
         $subtotal = $cantidad * $precio_unitario;
 
         return [
-            'id_reserva' => Reserva::factory(),
-            'id_servicio' => servicio::factory(),
+            'id_reserva' => Reserva::inRandomOrder()->first(),
+            'id_servicio' => servicio::inRandomOrder()->first(),
             'cantidad' => $cantidad,
             'precio_unitario' => $precio_unitario,
             'subtotal' => $subtotal,

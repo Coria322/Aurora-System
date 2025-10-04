@@ -25,6 +25,7 @@ class UserFactory extends Factory
             'activo' => $this->faker->boolean(90),
             'password' => bcrypt('password'), // por defecto
             'remember_token' => Str::random(10),
+            'email_verified_at' => now(),
         ];
     }
 

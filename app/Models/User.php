@@ -5,6 +5,8 @@ namespace App\Models;
 // use Illuminate\Contracts\Auth\MustVerifyEmail;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Foundation\Auth\User as Authenticatable;
+use Illuminate\Database\Eloquent\Attributes\Scope;
+use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Notifications\Notifiable;
 
 class User extends Authenticatable
@@ -61,5 +63,26 @@ class User extends Authenticatable
         return $this->hasMany(Reserva::class, 'id_usuario', 'id_usuario');
     }
 
-    
+    #[Scope] 
+    /**
+     * Retorna los usuarios por tipo (almacenado como enum en bd)
+     * @param \Illuminate\Database\Eloquent\Builder $query
+     * @param string $tipo
+     * @return void
+     */
+    protected function porTipo(Builder $query, string $tipo){
+        $query -> where('usuario', $tipo);
+    }
+
+    #[Scope]
+    /**
+     * Scope para usuarios que tengan una reserva válida
+     * @param \Illuminate\Database\Eloquent\Builder $query
+     * @return void
+     */
+    protected function conReserva(Builder $query){
+        $query -> with('reservas', function($subquery){
+            $subquery -> whereDate('fecha_checkin','>=', now());
+        });
+    }
 }

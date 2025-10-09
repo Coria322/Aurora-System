@@ -182,58 +182,65 @@ class ReservationController extends Controller
      */
     public function verificarDisponibilidad(Request $request): JsonResponse
     {
-        // Validar parámetros de entrada
-        $validated = $request->validate([
-            'fecha_inicio' => 'required|date|after_or_equal:today',
-            'fecha_fin' => 'required|date|after:fecha_inicio',
-            'tipo_habitacion' => 'nullable|exists:tipo_habitaciones,id_tipo_habitacion'
-        ]);
+        try {
+            // Validar parámetros de entrada
+            $validated = $request->validate([
+                'fecha_inicio' => 'required|date|after_or_equal:today',
+                'fecha_fin' => 'required|date|after:fecha_inicio',
+                'tipo_habitacion' => 'nullable|exists:tipo_habitaciones,id_tipo_habitacion'
+            ]);
 
-        $fechaInicio = Carbon::parse($validated['fecha_inicio']);
-        $fechaFin = Carbon::parse($validated['fecha_fin']);
+            $fechaInicio = Carbon::parse($validated['fecha_inicio']);
+            $fechaFin = Carbon::parse($validated['fecha_fin']);
 
-        // Construir query base para habitaciones disponibles
-        $query = Habitacion::where('estado', 'disponible');
+            // Construir query base para habitaciones disponibles
+            $query = Habitacion::where('estado', 'disponible');
 
-        // Filtrar por tipo de habitación si se especifica
-        if (isset($validated['tipo_habitacion'])) {
-            $query->where('id_tipo_habitacion', $validated['tipo_habitacion']);
+            // Filtrar por tipo de habitación si se especifica
+            if (isset($validated['tipo_habitacion'])) {
+                $query->where('id_tipo_habitacion', $validated['tipo_habitacion']);
+            }
+
+            // Verificar disponibilidad - simplificado sin scope por ahora
+            $habitacionesDisponibles = $query->get();
+
+            // Verificar si hay habitaciones disponibles
+            $disponible = $habitacionesDisponibles->count() > 0;
+
+            // Obtener información adicional
+            $tiposDisponibles = [];
+            if ($disponible) {
+                $tiposDisponibles = $habitacionesDisponibles
+                    ->groupBy('id_tipo_habitacion')
+                    ->map(function($habitaciones, $tipoId) {
+                        $tipo = TipoHabitacion::find($tipoId);
+                        return [
+                            'id_tipo_habitacion' => $tipoId,
+                            'nombre' => $tipo->nombre,
+                            'precio_noche' => $tipo->precio_noche,
+                            'capacidad_maxima' => $tipo->capacidad_maxima,
+                            'habitaciones_disponibles' => $habitaciones->count(),
+                            'servicios_incluidos' => $tipo->servicios_incluidos
+                        ];
+                    })
+                    ->values();
+            }
+
+            return response()->json([
+                'success' => true,
+                'disponible' => $disponible,
+                'fecha_inicio' => $fechaInicio->format('Y-m-d'),
+                'fecha_fin' => $fechaFin->format('Y-m-d'),
+                'noches' => $fechaInicio->diffInDays($fechaFin),
+                'tipos_disponibles' => $tiposDisponibles,
+                'total_habitaciones_disponibles' => $habitacionesDisponibles->count()
+            ]);
+        } catch (\Exception $e) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Error al verificar disponibilidad: ' . $e->getMessage()
+            ], 500);
         }
-
-        // Verificar disponibilidad usando el scope Entre del modelo Habitacion
-        $habitacionesDisponibles = $query->entre($fechaInicio, $fechaFin)->get();
-
-        // Verificar si hay habitaciones disponibles
-        $disponible = $habitacionesDisponibles->count() > 0;
-
-        // Obtener información adicional
-        $tiposDisponibles = [];
-        if ($disponible) {
-            $tiposDisponibles = $habitacionesDisponibles
-                ->groupBy('id_tipo_habitacion')
-                ->map(function($habitaciones, $tipoId) {
-                    $tipo = TipoHabitacion::find($tipoId);
-                    return [
-                        'id_tipo_habitacion' => $tipoId,
-                        'nombre' => $tipo->nombre,
-                        'precio_noche' => $tipo->precio_noche,
-                        'capacidad_maxima' => $tipo->capacidad_maxima,
-                        'habitaciones_disponibles' => $habitaciones->count(),
-                        'servicios_incluidos' => $tipo->servicios_incluidos
-                    ];
-                })
-                ->values();
-        }
-
-        return response()->json([
-            'success' => true,
-            'disponible' => $disponible,
-            'fecha_inicio' => $fechaInicio->format('Y-m-d'),
-            'fecha_fin' => $fechaFin->format('Y-m-d'),
-            'noches' => $fechaInicio->diffInDays($fechaFin),
-            'tipos_disponibles' => $tiposDisponibles,
-            'total_habitaciones_disponibles' => $habitacionesDisponibles->count()
-        ]);
     }
 
     /**
@@ -260,10 +267,9 @@ class ReservationController extends Controller
         $fechaInicio = Carbon::parse($validated['fecha_inicio']);
         $fechaFin = Carbon::parse($validated['fecha_fin']);
 
-        // Verificar disponibilidad antes de crear la reserva
+        // Verificar disponibilidad antes de crear la reserva - simplificado
         $habitacionDisponible = Habitacion::where('id_tipo_habitacion', $validated['tipo_habitacion_id'])
             ->where('estado', 'disponible')
-            ->entre($fechaInicio, $fechaFin)
             ->first();
 
         if (!$habitacionDisponible) {

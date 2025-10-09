@@ -153,6 +153,11 @@ const formatDate = (date: Date) => {
 
 // Función para formatear fecha para API
 const formatDateForAPI = (dateStr: string) => {
+  // Si ya está en formato YYYY-MM-DD (de input type="date"), devolverlo tal como está
+  if (dateStr.includes('-')) {
+    return dateStr
+  }
+  // Si está en formato DD/MM/YYYY (del calendario), convertir a YYYY-MM-DD
   const [day, month, year] = dateStr.split('/')
   return `${year}-${month.padStart(2, '0')}-${day.padStart(2, '0')}`
 }

@@ -1,8 +1,9 @@
 <script setup lang="ts">
-import { ref, computed } from 'vue'
+import { ref, computed, onMounted } from 'vue'
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
+import axios from 'axios'
 
 // Props y emits
 const props = defineProps<{
@@ -20,39 +21,47 @@ const isOpen = computed({
   set: (value) => emit('update:open', value)
 })
 
+// Configuración de axios
+const api = axios.create({
+  baseURL: '/api',
+  headers: {
+    'Content-Type': 'application/json',
+    'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]')?.getAttribute('content') || ''
+  }
+})
+
+// Estados de loading
+const isLoadingAvailability = ref(false)
+const isLoadingReservation = ref(false)
+const isLoadingRoomTypes = ref(false)
+
+// Estados de notificaciones
+const notification = ref({
+  show: false,
+  type: 'success' as 'success' | 'error' | 'info',
+  message: ''
+})
+
 // Datos de la reserva
 const checkInDate = ref('')
 const checkOutDate = ref('')
 const selectedRoomType = ref('')
 const isSelectingCheckIn = ref(true)
+const cantidadPersonas = ref(2)
+
+// Datos del huésped
+const huespedData = ref({
+  nombre: '',
+  apellido_paterno: '',
+  apellido_materno: '',
+  email: '',
+  telefono: '',
+  observaciones: ''
+})
 
 // Tipos de habitación (se cargarán desde el backend)
-const roomTypes = ref([
-  {
-    id: 1,
-    name: 'Suite Deluxe',
-    description: 'Habitación amplia con vista al mar',
-    price: 95,
-    capacity: 2,
-    available_rooms: 5
-  },
-  {
-    id: 2,
-    name: 'Habitación Estándar',
-    description: 'Cómoda habitación con todas las comodidades',
-    price: 65,
-    capacity: 2,
-    available_rooms: 8
-  },
-  {
-    id: 3,
-    name: 'Suite Familiar',
-    description: 'Perfecta para familias hasta 4 personas',
-    price: 120,
-    capacity: 4,
-    available_rooms: 3
-  }
-])
+const roomTypes = ref([])
+const availabilityData = ref(null)
 
 // Días de la semana
 const weekDays = ['Dom', 'Lun', 'Mar', 'Mie', 'Jue', 'Vie', 'Sab']
@@ -73,6 +82,20 @@ const generateCalendarDates = () => {
 }
 
 const calendarDates = ref(generateCalendarDates())
+
+// Función para mostrar notificaciones
+const showNotification = (type: 'success' | 'error' | 'info', message: string) => {
+  notification.value = {
+    show: true,
+    type,
+    message
+  }
+  
+  // Auto-hide después de 5 segundos
+  setTimeout(() => {
+    notification.value.show = false
+  }, 5000)
+}
 
 // Función para verificar si una fecha está seleccionada
 const isDateSelected = (date: Date) => {
@@ -128,82 +151,183 @@ const formatDate = (date: Date) => {
   })
 }
 
+// Función para formatear fecha para API
+const formatDateForAPI = (dateStr: string) => {
+  const [day, month, year] = dateStr.split('/')
+  return `${year}-${month.padStart(2, '0')}-${day.padStart(2, '0')}`
+}
+
 // Función para seleccionar habitación
 const selectRoomType = (roomId: string) => {
   selectedRoomType.value = roomId
 }
 
-// Función para continuar con la reserva usando los modelos existentes
-const continueReservation = async () => {
-  if (!checkInDate.value || !checkOutDate.value || !selectedRoomType.value) {
-    alert('Por favor, completa todos los campos requeridos')
+// Cargar tipos de habitaciones al montar el componente
+const cargarTiposHabitaciones = async () => {
+  try {
+    isLoadingRoomTypes.value = true
+    const response = await api.get('/habitaciones/tipos-publico')
+    
+    if (response.data.success) {
+      roomTypes.value = response.data.data.map((tipo: any) => ({
+        id: tipo.id_tipo_habitacion,
+        name: tipo.nombre,
+        description: tipo.descripcion,
+        price: tipo.precio_noche,
+        capacity: tipo.capacidad_maxima,
+        available_rooms: tipo.habitaciones_disponibles,
+        services: tipo.servicios_incluidos
+      }))
+    }
+  } catch (error) {
+    console.error('Error cargando tipos de habitaciones:', error)
+    showNotification('error', 'Error al cargar los tipos de habitaciones')
+  } finally {
+    isLoadingRoomTypes.value = false
+  }
+}
+
+// Método para buscar disponibilidad
+const buscarDisponibilidad = async () => {
+  if (!checkInDate.value || !checkOutDate.value) {
+    showNotification('error', 'Por favor, selecciona las fechas de entrada y salida')
     return
   }
 
-  const selectedRoom = roomTypes.value.find(room => room.id.toString() === selectedRoomType.value)
-  
-  // Datos de la reserva para enviar al backend usando los modelos existentes
-  const reservationData = {
-    tipo_habitacion_id: parseInt(selectedRoomType.value),
-    fecha_checkin: checkInDate.value,
-    fecha_checkout: checkOutDate.value,
-    cantidad_personas: 2, // Por defecto 2 personas
-    nombre_huesped: 'Usuario', // Por ahora usar nombre por defecto
-    apellido_paterno: 'Apellido', // Por ahora usar apellido por defecto
-    apellido_materno: null,
-    email_huesped: 'usuario@example.com', // Por ahora usar email por defecto
-    telefono_huesped: null,
-    observaciones: null
+  try {
+    isLoadingAvailability.value = true
+    
+    const params = {
+      fecha_inicio: formatDateForAPI(checkInDate.value),
+      fecha_fin: formatDateForAPI(checkOutDate.value)
+    }
+
+    const response = await api.get('/reservas/disponibilidad-publico', { params })
+    
+    if (response.data.success) {
+      availabilityData.value = response.data
+      
+      if (response.data.disponible) {
+        showNotification('success', `¡Disponible! ${response.data.total_habitaciones_disponibles} habitaciones disponibles`)
+        
+        // Actualizar información de disponibilidad en roomTypes
+        roomTypes.value = roomTypes.value.map(room => {
+          const tipoDisponible = response.data.tipos_disponibles.find(
+            (tipo: any) => tipo.id_tipo_habitacion === room.id
+          )
+          return {
+            ...room,
+            available_rooms: tipoDisponible ? tipoDisponible.habitaciones_disponibles : 0
+          }
+        })
+      } else {
+        showNotification('error', 'No hay habitaciones disponibles para las fechas seleccionadas')
+      }
+    }
+  } catch (error) {
+    console.error('Error verificando disponibilidad:', error)
+    showNotification('error', 'Error al verificar disponibilidad. Intenta nuevamente.')
+  } finally {
+    isLoadingAvailability.value = false
+  }
+}
+
+// Método para crear reserva
+const crearReserva = async () => {
+  if (!checkInDate.value || !checkOutDate.value || !selectedRoomType.value) {
+    showNotification('error', 'Por favor, completa todos los campos requeridos')
+    return
+  }
+
+  // Validar datos del huésped
+  if (!huespedData.value.nombre || !huespedData.value.apellido_paterno || !huespedData.value.email) {
+    showNotification('error', 'Por favor, completa los datos del huésped')
+    return
   }
 
   try {
-    // Enviar datos al backend
-    const response = await fetch('/api/reservations', {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]')?.getAttribute('content') || ''
-      },
-      body: JSON.stringify(reservationData)
-    })
+    isLoadingReservation.value = true
+    
+    const reservationData = {
+      fecha_inicio: formatDateForAPI(checkInDate.value),
+      fecha_fin: formatDateForAPI(checkOutDate.value),
+      tipo_habitacion_id: parseInt(selectedRoomType.value),
+      usuario_id: 1, // Por ahora usar ID fijo, debería venir del usuario autenticado
+      cantidad_personas: cantidadPersonas.value,
+      nombre_huesped: huespedData.value.nombre,
+      apellido_paterno: huespedData.value.apellido_paterno,
+      apellido_materno: huespedData.value.apellido_materno || null,
+      email_huesped: huespedData.value.email,
+      telefono_huesped: huespedData.value.telefono || null,
+      observaciones: huespedData.value.observaciones || null
+    }
 
-    const result = await response.json()
-
-    if (result.success) {
-      alert(`¡Reserva creada exitosamente!\n\nReserva #${result.data.id_reserva}\nHabitación: ${selectedRoom?.name}\nFechas: ${result.data.fecha_checkin} - ${result.data.fecha_checkout}\nTotal: $${result.data.total}`)
-      isOpen.value = false
+    const response = await api.post('/reservas/crear', reservationData)
+    
+    if (response.data.success) {
+      const reserva = response.data.data
+      const selectedRoom = roomTypes.value.find(room => room.id.toString() === selectedRoomType.value)
+      
+      showNotification('success', `¡Reserva creada exitosamente! Reserva #${reserva.id_reserva}`)
       
       // Emitir evento para notificar al componente padre
-      emit('reservation:submit', result.data)
-    } else {
-      alert('Error al crear la reserva: ' + (result.message || 'Error desconocido'))
+      emit('reservation:submit', reserva)
+      
+      // Cerrar modal después de un breve delay
+      setTimeout(() => {
+        isOpen.value = false
+        resetForm()
+      }, 2000)
     }
-  } catch (error) {
-    console.error('Error:', error)
-    alert('Error de conexión. Por favor, intenta nuevamente.')
+  } catch (error: any) {
+    console.error('Error creando reserva:', error)
+    
+    let errorMessage = 'Error al crear la reserva'
+    if (error.response?.data?.message) {
+      errorMessage = error.response.data.message
+    } else if (error.response?.data?.errors) {
+      const errors = Object.values(error.response.data.errors).flat()
+      errorMessage = errors.join(', ')
+    }
+    
+    showNotification('error', errorMessage)
+  } finally {
+    isLoadingReservation.value = false
   }
+}
+
+// Función para resetear el formulario
+const resetForm = () => {
+  checkInDate.value = ''
+  checkOutDate.value = ''
+  selectedRoomType.value = ''
+  cantidadPersonas.value = 2
+  huespedData.value = {
+    nombre: '',
+    apellido_paterno: '',
+    apellido_materno: '',
+    email: '',
+    telefono: '',
+    observaciones: ''
+  }
+  availabilityData.value = null
 }
 
 // Función para cerrar modal
 const closeModal = () => {
   isOpen.value = false
+  resetForm()
 }
 
-// Función para buscar disponibilidad
-const searchAvailability = () => {
-  if (!checkInDate.value || !checkOutDate.value) {
-    alert('Por favor, selecciona las fechas de entrada y salida')
-    return
-  }
-  
-  // Aquí se implementaría la lógica de búsqueda de disponibilidad
-  console.log('Buscando disponibilidad...', { checkIn: checkInDate.value, checkOut: checkOutDate.value })
-}
+// Cargar tipos de habitaciones al montar el componente
+onMounted(() => {
+  cargarTiposHabitaciones()
+})
 </script>
 
 <template>
   <Dialog v-model:open="isOpen">
-    <DialogContent class="max-w-4xl max-h-[90vh] overflow-y-auto">
+    <DialogContent class="max-w-5xl max-h-[90vh] overflow-y-auto">
       <DialogHeader class="bg-blue-900 text-white p-6 rounded-t-lg -m-6 mb-6">
         <div class="flex items-center gap-4">
           <div class="w-12 h-12 bg-blue-400 rounded-full flex items-center justify-center">
@@ -215,13 +339,42 @@ const searchAvailability = () => {
         </div>
       </DialogHeader>
 
+      <!-- Notificación Toast -->
+      <div 
+        v-if="notification.show"
+        class="fixed top-4 right-4 z-50 p-4 rounded-lg shadow-lg transition-all duration-300"
+        :class="{
+          'bg-green-500 text-white': notification.type === 'success',
+          'bg-red-500 text-white': notification.type === 'error',
+          'bg-blue-500 text-white': notification.type === 'info'
+        }"
+      >
+        <div class="flex items-center gap-2">
+          <span v-if="notification.type === 'success'">✓</span>
+          <span v-else-if="notification.type === 'error'">✗</span>
+          <span v-else>ℹ</span>
+          <span>{{ notification.message }}</span>
+        </div>
+      </div>
+
       <div class="space-y-6">
         <!-- Selección de fechas -->
         <div class="space-y-4">
           <div class="flex items-center justify-between">
             <h3 class="text-lg font-semibold text-gray-900">Selecciona tus fechas</h3>
-            <Button @click="searchAvailability" class="bg-blue-600 hover:bg-blue-700">
-              Buscar
+            <Button 
+              @click="buscarDisponibilidad" 
+              :disabled="isLoadingAvailability || !checkInDate || !checkOutDate"
+              class="bg-blue-600 hover:bg-blue-700 disabled:bg-gray-400"
+            >
+              <span v-if="isLoadingAvailability" class="flex items-center gap-2">
+                <svg class="animate-spin h-4 w-4" fill="none" viewBox="0 0 24 24">
+                  <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+                  <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                </svg>
+                Verificando...
+              </span>
+              <span v-else>Buscar Disponibilidad</span>
             </Button>
           </div>
           
@@ -242,6 +395,28 @@ const searchAvailability = () => {
                 class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
               />
             </div>
+            <div class="flex-1">
+              <label class="block text-sm font-medium text-gray-700 mb-2">Personas</label>
+              <select
+                v-model="cantidadPersonas"
+                class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+              >
+                <option v-for="i in 10" :key="i" :value="i">{{ i }}</option>
+              </select>
+            </div>
+          </div>
+        </div>
+
+        <!-- Información de disponibilidad -->
+        <div v-if="availabilityData" class="bg-blue-50 border border-blue-200 rounded-lg p-4">
+          <div class="flex items-center gap-2 text-blue-800 font-medium mb-2">
+            <span>📊</span>
+            <span>Información de Disponibilidad</span>
+          </div>
+          <div class="text-sm text-blue-700">
+            <p><strong>Período:</strong> {{ availabilityData.fecha_inicio }} - {{ availabilityData.fecha_fin }}</p>
+            <p><strong>Noches:</strong> {{ availabilityData.noches }}</p>
+            <p><strong>Habitaciones disponibles:</strong> {{ availabilityData.total_habitaciones_disponibles }}</p>
           </div>
         </div>
 
@@ -320,7 +495,13 @@ const searchAvailability = () => {
             </div>
           </div>
           
-          <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+          <!-- Loading de tipos de habitaciones -->
+          <div v-if="isLoadingRoomTypes" class="flex justify-center py-8">
+            <div class="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600"></div>
+          </div>
+          
+          <!-- Grid de habitaciones -->
+          <div v-else class="grid grid-cols-1 md:grid-cols-3 gap-4">
             <Card
               v-for="room in roomTypes"
               :key="room.id"
@@ -328,9 +509,10 @@ const searchAvailability = () => {
               :class="{
                 'ring-2 ring-blue-500 bg-blue-50': selectedRoomType === room.id.toString(),
                 'bg-blue-900 text-white': selectedRoomType === room.id.toString(),
-                'hover:ring-2 hover:ring-blue-300': selectedRoomType !== room.id.toString()
+                'hover:ring-2 hover:ring-blue-300': selectedRoomType !== room.id.toString(),
+                'opacity-50 cursor-not-allowed': room.available_rooms === 0
               }"
-              @click="selectRoomType(room.id.toString())"
+              @click="room.available_rooms > 0 ? selectRoomType(room.id.toString()) : null"
             >
               <CardHeader class="pb-2">
                 <CardTitle 
@@ -361,7 +543,7 @@ const searchAvailability = () => {
                 <div class="mt-2 text-sm text-gray-500">
                   Capacidad: {{ room.capacity }} personas
                 </div>
-                <div class="text-sm text-gray-500">
+                <div class="text-sm" :class="room.available_rooms > 0 ? 'text-green-600' : 'text-red-600'">
                   Disponibles: {{ room.available_rooms }}
                 </div>
               </CardContent>
@@ -393,6 +575,76 @@ const searchAvailability = () => {
           </p>
         </div>
 
+        <!-- Datos del huésped -->
+        <div v-if="checkInDate && checkOutDate && selectedRoomType" class="space-y-4">
+          <h3 class="text-lg font-semibold text-gray-900">Datos del Huésped</h3>
+          
+          <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div>
+              <label class="block text-sm font-medium text-gray-700 mb-2">Nombre *</label>
+              <input
+                v-model="huespedData.nombre"
+                type="text"
+                required
+                class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                placeholder="Nombre del huésped"
+              />
+            </div>
+            
+            <div>
+              <label class="block text-sm font-medium text-gray-700 mb-2">Apellido Paterno *</label>
+              <input
+                v-model="huespedData.apellido_paterno"
+                type="text"
+                required
+                class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                placeholder="Apellido paterno"
+              />
+            </div>
+            
+            <div>
+              <label class="block text-sm font-medium text-gray-700 mb-2">Apellido Materno</label>
+              <input
+                v-model="huespedData.apellido_materno"
+                type="text"
+                class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                placeholder="Apellido materno"
+              />
+            </div>
+            
+            <div>
+              <label class="block text-sm font-medium text-gray-700 mb-2">Email *</label>
+              <input
+                v-model="huespedData.email"
+                type="email"
+                required
+                class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                placeholder="email@ejemplo.com"
+              />
+            </div>
+            
+            <div>
+              <label class="block text-sm font-medium text-gray-700 mb-2">Teléfono</label>
+              <input
+                v-model="huespedData.telefono"
+                type="tel"
+                class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                placeholder="Número de teléfono"
+              />
+            </div>
+            
+            <div class="md:col-span-2">
+              <label class="block text-sm font-medium text-gray-700 mb-2">Observaciones</label>
+              <textarea
+                v-model="huespedData.observaciones"
+                rows="3"
+                class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                placeholder="Observaciones especiales..."
+              ></textarea>
+            </div>
+          </div>
+        </div>
+
         <!-- Botones de acción -->
         <div class="flex justify-between items-center pt-6 border-t">
           <Button 
@@ -414,14 +666,25 @@ const searchAvailability = () => {
                 <span>🏨</span>
                 <span>{{ roomTypes.find(r => r.id.toString() === selectedRoomType)?.name }}</span>
               </div>
+              <div class="flex items-center gap-2">
+                <span>👥</span>
+                <span>{{ cantidadPersonas }} personas</span>
+              </div>
             </div>
             
             <Button 
-              @click="continueReservation"
-              :disabled="!checkInDate || !checkOutDate || !selectedRoomType"
+              @click="crearReserva"
+              :disabled="!checkInDate || !checkOutDate || !selectedRoomType || isLoadingReservation"
               class="bg-blue-900 hover:bg-blue-800 text-white px-6 py-2 disabled:bg-gray-400 disabled:cursor-not-allowed"
             >
-              {{ checkInDate && checkOutDate && selectedRoomType ? 'Continuar con la reserva' : 'Completa la selección' }}
+              <span v-if="isLoadingReservation" class="flex items-center gap-2">
+                <svg class="animate-spin h-4 w-4" fill="none" viewBox="0 0 24 24">
+                  <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+                  <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                </svg>
+                Creando...
+              </span>
+              <span v-else>Crear Reserva</span>
             </Button>
           </div>
         </div>

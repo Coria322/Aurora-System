@@ -138,6 +138,7 @@ const selectCalendarDate = (date: Date) => {
       // Si la fecha de salida es anterior a la de entrada, intercambiar
       checkOutDate.value = checkInDate.value
       checkInDate.value = dateStr
+      isSelectingCheckIn.value = true
     }
   }
 }
@@ -196,6 +197,15 @@ const cargarTiposHabitaciones = async () => {
 const buscarDisponibilidad = async () => {
   if (!checkInDate.value || !checkOutDate.value) {
     showNotification('error', 'Por favor, selecciona las fechas de entrada y salida')
+    return
+  }
+
+  // Validar que la fecha de salida sea posterior a la de entrada
+  const fechaInicio = new Date(formatDateForAPI(checkInDate.value))
+  const fechaFin = new Date(formatDateForAPI(checkOutDate.value))
+  
+  if (fechaFin <= fechaInicio) {
+    showNotification('error', 'La fecha de salida debe ser posterior a la fecha de entrada')
     return
   }
 

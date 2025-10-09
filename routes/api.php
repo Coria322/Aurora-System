@@ -211,6 +211,66 @@ Route::get('/reservas/disponibilidad-publico', function (Request $request) {
 });
 
 /**
+ * Endpoint alternativo de disponibilidad - VERSIÓN FUNCIONAL
+ * GET /api/disponibilidad-test
+ */
+Route::get('/disponibilidad-test', function (Request $request) {
+    try {
+        $fechaInicio = $request->get('fecha_inicio');
+        $fechaFin = $request->get('fecha_fin');
+        
+        if (!$fechaInicio || !$fechaFin) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Fechas requeridas'
+            ], 400);
+        }
+
+        // Contar habitaciones disponibles
+        $totalHabitaciones = \App\Models\Habitacion::where('estado', 'disponible')->count();
+        
+        // Obtener tipos de habitaciones disponibles
+        $tiposDisponibles = \App\Models\TipoHabitacion::where('activo', true)
+            ->withCount(['habitaciones' => function($query) {
+                $query->where('estado', 'disponible');
+            }])
+            ->get()
+            ->map(function($tipo) {
+                return [
+                    'id_tipo_habitacion' => $tipo->id_tipo_habitacion,
+                    'nombre' => $tipo->nombre,
+                    'precio_noche' => $tipo->precio_noche,
+                    'capacidad_maxima' => $tipo->capacidad_maxima,
+                    'habitaciones_disponibles' => $tipo->habitaciones_count,
+                    'servicios_incluidos' => $tipo->servicios_incluidos
+                ];
+            })
+            ->filter(function($tipo) {
+                return $tipo['habitaciones_disponibles'] > 0;
+            })
+            ->values();
+        
+        return response()->json([
+            'success' => true,
+            'disponible' => $totalHabitaciones > 0,
+            'fecha_inicio' => $fechaInicio,
+            'fecha_fin' => $fechaFin,
+            'tipos_disponibles' => $tiposDisponibles,
+            'total_habitaciones_disponibles' => $totalHabitaciones,
+            'message' => 'Disponibilidad verificada correctamente'
+        ]);
+        
+    } catch (\Exception $e) {
+        return response()->json([
+            'success' => false,
+            'message' => 'Error: ' . $e->getMessage(),
+            'file' => $e->getFile(),
+            'line' => $e->getLine()
+        ], 500);
+    }
+});
+
+/**
  * Endpoint de prueba simple
  * GET /api/test
  */

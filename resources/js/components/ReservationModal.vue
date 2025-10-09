@@ -13,6 +13,7 @@ const props = defineProps<{
 const emit = defineEmits<{
   'update:open': [value: boolean]
   'reservation:submit': [data: any]
+  'close': []
 }>()
 
 // Estado del modal
@@ -340,13 +341,24 @@ onMounted(() => {
   <Dialog v-model:open="isOpen">
     <DialogContent class="max-w-5xl max-h-[90vh] overflow-y-auto">
       <DialogHeader class="bg-blue-900 text-white p-6 rounded-t-lg -m-6 mb-6">
-        <div class="flex items-center gap-4">
-          <div class="w-12 h-12 bg-blue-400 rounded-full flex items-center justify-center">
-            <svg class="w-6 h-6 text-white" fill="currentColor" viewBox="0 0 20 20">
-              <path d="M10 2L3 7v11a1 1 0 001 1h12a1 1 0 001-1V7l-7-5z"/>
-            </svg>
+        <div class="flex items-center justify-between">
+          <div class="flex items-center gap-4">
+            <div class="w-12 h-12 bg-blue-400 rounded-full flex items-center justify-center">
+              <svg class="w-6 h-6 text-white" fill="currentColor" viewBox="0 0 20 20">
+                <path d="M10 2L3 7v11a1 1 0 001 1h12a1 1 0 001-1V7l-7-5z"/>
+              </svg>
+            </div>
+            <DialogTitle class="text-2xl font-bold">Sistema Reservas</DialogTitle>
           </div>
-          <DialogTitle class="text-2xl font-bold">Sistema Reservas</DialogTitle>
+          <button 
+            @click="() => { isOpen = false; emit('close') }"
+            class="text-white hover:text-gray-300 transition-colors duration-200 p-2 rounded-full hover:bg-blue-800"
+            aria-label="Cerrar modal"
+          >
+            <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path>
+            </svg>
+          </button>
         </div>
       </DialogHeader>
 

@@ -311,7 +311,8 @@ Route::post('/reservas/crear-publico', function (Request $request) {
             'email' => $email,
             'telefono' => '0000000000',
             'tipo_documento' => 'INE', // Usar valor válido del ENUM
-            'documento_identidad' => '0000000000'
+            'documento_identidad' => '0000000000',
+            'fecha_nacimiento' => null // Agregar fecha de nacimiento como null
         ]);
 
         // Calcular totales

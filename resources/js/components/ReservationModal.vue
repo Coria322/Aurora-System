@@ -207,7 +207,7 @@ const buscarDisponibilidad = async () => {
       fecha_fin: formatDateForAPI(checkOutDate.value)
     }
 
-    const response = await api.get('/reservas/disponibilidad-publico', { params })
+    const response = await api.get('/disponibilidad-test', { params })
     
     if (response.data.success) {
       availabilityData.value = response.data

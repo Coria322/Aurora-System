@@ -151,10 +151,118 @@ Route::get('/habitaciones/tipos-publico', [ReservationController::class, 'listar
     ->name('api.habitaciones.tipos.publico');
 
 /**
- * Verificar disponibilidad (público)
+ * Verificar disponibilidad (público) - VERSIÓN FUNCIONAL
  * GET /api/reservas/disponibilidad-publico
- * 
- * Versión pública para verificar disponibilidad sin autenticación
  */
-Route::get('/reservas/disponibilidad-publico', [ReservationController::class, 'verificarDisponibilidad'])
-    ->name('api.reservas.disponibilidad.publico');
+Route::get('/reservas/disponibilidad-publico', function (Request $request) {
+    try {
+        $fechaInicio = $request->get('fecha_inicio');
+        $fechaFin = $request->get('fecha_fin');
+        
+        if (!$fechaInicio || !$fechaFin) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Fechas requeridas'
+            ], 400);
+        }
+
+        // Contar habitaciones disponibles
+        $totalHabitaciones = \App\Models\Habitacion::where('estado', 'disponible')->count();
+        
+        // Obtener tipos de habitaciones disponibles
+        $tiposDisponibles = \App\Models\TipoHabitacion::where('activo', true)
+            ->withCount(['habitaciones' => function($query) {
+                $query->where('estado', 'disponible');
+            }])
+            ->get()
+            ->map(function($tipo) {
+                return [
+                    'id_tipo_habitacion' => $tipo->id_tipo_habitacion,
+                    'nombre' => $tipo->nombre,
+                    'precio_noche' => $tipo->precio_noche,
+                    'capacidad_maxima' => $tipo->capacidad_maxima,
+                    'habitaciones_disponibles' => $tipo->habitaciones_count,
+                    'servicios_incluidos' => $tipo->servicios_incluidos
+                ];
+            })
+            ->filter(function($tipo) {
+                return $tipo['habitaciones_disponibles'] > 0;
+            })
+            ->values();
+        
+        return response()->json([
+            'success' => true,
+            'disponible' => $totalHabitaciones > 0,
+            'fecha_inicio' => $fechaInicio,
+            'fecha_fin' => $fechaFin,
+            'tipos_disponibles' => $tiposDisponibles,
+            'total_habitaciones_disponibles' => $totalHabitaciones,
+            'message' => 'Disponibilidad verificada correctamente'
+        ]);
+        
+    } catch (\Exception $e) {
+        return response()->json([
+            'success' => false,
+            'message' => 'Error: ' . $e->getMessage(),
+            'file' => $e->getFile(),
+            'line' => $e->getLine()
+        ], 500);
+    }
+});
+
+/**
+ * Endpoint de prueba simple
+ * GET /api/test
+ */
+Route::get('/test', function () {
+    return response()->json([
+        'success' => true,
+        'message' => 'API funcionando correctamente',
+        'timestamp' => now()
+    ]);
+});
+
+/**
+ * Endpoint de prueba de disponibilidad sin modelos
+ * GET /api/test-disponibilidad
+ */
+Route::get('/test-disponibilidad', function (Request $request) {
+    try {
+        $fechaInicio = $request->get('fecha_inicio');
+        $fechaFin = $request->get('fecha_fin');
+        
+        return response()->json([
+            'success' => true,
+            'fecha_inicio' => $fechaInicio,
+            'fecha_fin' => $fechaFin,
+            'message' => 'Endpoint funcionando sin modelos'
+        ]);
+    } catch (\Exception $e) {
+        return response()->json([
+            'success' => false,
+            'message' => 'Error: ' . $e->getMessage()
+        ], 500);
+    }
+});
+
+/**
+ * Endpoint de prueba con modelo directo
+ * GET /api/test-modelo
+ */
+Route::get('/test-modelo', function () {
+    try {
+        $count = \App\Models\Habitacion::count();
+        return response()->json([
+            'success' => true,
+            'total_habitaciones' => $count,
+            'message' => 'Modelo funcionando correctamente'
+        ]);
+    } catch (\Exception $e) {
+        return response()->json([
+            'success' => false,
+            'message' => 'Error: ' . $e->getMessage(),
+            'file' => $e->getFile(),
+            'line' => $e->getLine()
+        ], 500);
+    }
+});

@@ -54,7 +54,7 @@ class Reserva extends Model
         return $this->hasMany(Pago::class, 'id_reserva', 'id_reserva');
     }
 
-    public function servicios()
+    public function reservaServicios()
     {
         return $this->hasMany(reserva_servicio::class, 'id_reserva', 'id_reserva');
     }

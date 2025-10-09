@@ -3,6 +3,8 @@
 namespace App\Models;
 
 use Illuminate\Database\Eloquent\Factories\HasFactory;
+use Illuminate\Database\Eloquent\Attributes\Scope;
+use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Model;
 
 class Pago extends Model
@@ -29,5 +31,15 @@ class Pago extends Model
     public function reserva()
     {
         return $this->belongsTo(Reserva::class, 'id_reserva', 'id_reserva');
+    }
+
+
+    //Scopes locales
+
+
+    #[Scope]
+    protected function pendientes(Builder $query)
+    {
+        $query->where('estado_pago', 'pendiente');
     }
 }

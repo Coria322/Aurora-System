@@ -11,7 +11,7 @@ const props = defineProps<{
 
 const emit = defineEmits<{
   'update:open': [value: boolean]
-  'reservation:submit': [data: ReservationData]
+  'reservation:submit': [data: any]
 }>()
 
 // Estado del modal
@@ -24,33 +24,35 @@ const isOpen = computed({
 const checkInDate = ref('')
 const checkOutDate = ref('')
 const selectedRoomType = ref('')
-// const selectedDate = ref<Date | null>(null) // Removed unused variable
 const isSelectingCheckIn = ref(true)
 
-// Tipos de habitación
-const roomTypes = [
+// Tipos de habitación (se cargarán desde el backend)
+const roomTypes = ref([
   {
-    id: 'suite-deluxe',
+    id: 1,
     name: 'Suite Deluxe',
     description: 'Habitación amplia con vista al mar',
     price: 95,
-    image: '/images/suite-deluxe.jpg'
+    capacity: 2,
+    available_rooms: 5
   },
   {
-    id: 'habitacion-estandar',
+    id: 2,
     name: 'Habitación Estándar',
     description: 'Cómoda habitación con todas las comodidades',
     price: 65,
-    image: '/images/habitacion-estandar.jpg'
+    capacity: 2,
+    available_rooms: 8
   },
   {
-    id: 'suite-familiar',
+    id: 3,
     name: 'Suite Familiar',
     description: 'Perfecta para familias hasta 4 personas',
     price: 120,
-    image: '/images/suite-familiar.jpg'
+    capacity: 4,
+    available_rooms: 3
   }
-]
+])
 
 // Días de la semana
 const weekDays = ['Dom', 'Lun', 'Mar', 'Mie', 'Jue', 'Vie', 'Sab']
@@ -82,7 +84,6 @@ const isDateSelected = (date: Date) => {
 const isDateInRange = (date: Date) => {
   if (!checkInDate.value || !checkOutDate.value) return false
   
-  // const dateStr = formatDate(date) // Removed unused variable
   const checkIn = new Date(checkInDate.value)
   const checkOut = new Date(checkOutDate.value)
   const currentDate = new Date(date)
@@ -127,45 +128,32 @@ const formatDate = (date: Date) => {
   })
 }
 
-// Función para formatear fecha para input (commented out - not used)
-// const formatDateForInput = (dateStr: string) => {
-//   if (!dateStr) return ''
-//   const [day, month, year] = dateStr.split('/')
-//   return `${year}-${month}-${day}`
-// }
-
-// Función para formatear fecha desde input (commented out - not used)
-// const formatDateFromInput = (dateStr: string) => {
-//   if (!dateStr) return ''
-//   const date = new Date(dateStr)
-//   return formatDate(date)
-// }
-
 // Función para seleccionar habitación
 const selectRoomType = (roomId: string) => {
   selectedRoomType.value = roomId
 }
 
-// Función para continuar con la reserva
+// Función para continuar con la reserva usando los modelos existentes
 const continueReservation = async () => {
   if (!checkInDate.value || !checkOutDate.value || !selectedRoomType.value) {
     alert('Por favor, completa todos los campos requeridos')
     return
   }
 
-  const selectedRoom = roomTypes.find(room => room.id === selectedRoomType.value)
+  const selectedRoom = roomTypes.value.find(room => room.id.toString() === selectedRoomType.value)
   
-  // Datos de la reserva para enviar al backend
+  // Datos de la reserva para enviar al backend usando los modelos existentes
   const reservationData = {
-    room_type: selectedRoomType.value,
-    room_name: selectedRoom?.name || '',
-    price_per_night: selectedRoom?.price || 0,
-    check_in_date: checkInDate.value,
-    check_out_date: checkOutDate.value,
-    guest_name: 'Usuario', // Por ahora usar nombre por defecto
-    guest_email: 'usuario@example.com', // Por ahora usar email por defecto
-    guest_phone: null,
-    special_requests: null
+    tipo_habitacion_id: parseInt(selectedRoomType.value),
+    fecha_checkin: checkInDate.value,
+    fecha_checkout: checkOutDate.value,
+    cantidad_personas: 2, // Por defecto 2 personas
+    nombre_huesped: 'Usuario', // Por ahora usar nombre por defecto
+    apellido_paterno: 'Apellido', // Por ahora usar apellido por defecto
+    apellido_materno: null,
+    email_huesped: 'usuario@example.com', // Por ahora usar email por defecto
+    telefono_huesped: null,
+    observaciones: null
   }
 
   try {
@@ -182,7 +170,7 @@ const continueReservation = async () => {
     const result = await response.json()
 
     if (result.success) {
-      alert(`¡Reserva creada exitosamente!\n\nReserva #${result.data.id}\nHabitación: ${result.data.room_name}\nFechas: ${result.data.check_in_date} - ${result.data.check_out_date}\nTotal: $${result.data.total_amount}`)
+      alert(`¡Reserva creada exitosamente!\n\nReserva #${result.data.id_reserva}\nHabitación: ${selectedRoom?.name}\nFechas: ${result.data.fecha_checkin} - ${result.data.fecha_checkout}\nTotal: $${result.data.total}`)
       isOpen.value = false
       
       // Emitir evento para notificar al componente padre
@@ -338,37 +326,43 @@ const searchAvailability = () => {
               :key="room.id"
               class="cursor-pointer transition-all duration-200 hover:shadow-lg transform hover:scale-105"
               :class="{
-                'ring-2 ring-blue-500 bg-blue-50': selectedRoomType === room.id,
-                'bg-blue-900 text-white': selectedRoomType === room.id,
-                'hover:ring-2 hover:ring-blue-300': selectedRoomType !== room.id
+                'ring-2 ring-blue-500 bg-blue-50': selectedRoomType === room.id.toString(),
+                'bg-blue-900 text-white': selectedRoomType === room.id.toString(),
+                'hover:ring-2 hover:ring-blue-300': selectedRoomType !== room.id.toString()
               }"
-              @click="selectRoomType(room.id)"
+              @click="selectRoomType(room.id.toString())"
             >
               <CardHeader class="pb-2">
                 <CardTitle 
                   class="text-lg flex items-center justify-between"
-                  :class="selectedRoomType === room.id ? 'text-white' : 'text-gray-900'"
+                  :class="selectedRoomType === room.id.toString() ? 'text-white' : 'text-gray-900'"
                 >
                   {{ room.name }}
-                  <div v-if="selectedRoomType === room.id" class="text-green-400">
+                  <div v-if="selectedRoomType === room.id.toString()" class="text-green-400">
                     ✓
                   </div>
                 </CardTitle>
               </CardHeader>
               <CardContent class="pt-0">
                 <CardDescription 
-                  :class="selectedRoomType === room.id ? 'text-blue-100' : 'text-gray-600'"
+                  :class="selectedRoomType === room.id.toString() ? 'text-blue-100' : 'text-gray-600'"
                 >
                   {{ room.description }}
                 </CardDescription>
                 <div 
                   class="mt-3 text-xl font-bold flex items-center justify-between"
-                  :class="selectedRoomType === room.id ? 'text-white' : 'text-blue-600'"
+                  :class="selectedRoomType === room.id.toString() ? 'text-white' : 'text-blue-600'"
                 >
                   <span>${{ room.price }}/noche</span>
-                  <div v-if="selectedRoomType === room.id" class="text-sm bg-green-500 text-white px-2 py-1 rounded">
+                  <div v-if="selectedRoomType === room.id.toString()" class="text-sm bg-green-500 text-white px-2 py-1 rounded">
                     Seleccionada
                   </div>
+                </div>
+                <div class="mt-2 text-sm text-gray-500">
+                  Capacidad: {{ room.capacity }} personas
+                </div>
+                <div class="text-sm text-gray-500">
+                  Disponibles: {{ room.available_rooms }}
                 </div>
               </CardContent>
             </Card>
@@ -381,9 +375,9 @@ const searchAvailability = () => {
               <span>Habitación seleccionada</span>
             </div>
             <div class="text-sm text-green-700">
-              <p><strong>{{ roomTypes.find(r => r.id === selectedRoomType)?.name }}</strong></p>
-              <p>{{ roomTypes.find(r => r.id === selectedRoomType)?.description }}</p>
-              <p class="font-bold">${{ roomTypes.find(r => r.id === selectedRoomType)?.price }}/noche</p>
+              <p><strong>{{ roomTypes.find(r => r.id.toString() === selectedRoomType)?.name }}</strong></p>
+              <p>{{ roomTypes.find(r => r.id.toString() === selectedRoomType)?.description }}</p>
+              <p class="font-bold">${{ roomTypes.find(r => r.id.toString() === selectedRoomType)?.price }}/noche</p>
             </div>
           </div>
         </div>
@@ -418,7 +412,7 @@ const searchAvailability = () => {
               </div>
               <div class="flex items-center gap-2">
                 <span>🏨</span>
-                <span>{{ roomTypes.find(r => r.id === selectedRoomType)?.name }}</span>
+                <span>{{ roomTypes.find(r => r.id.toString() === selectedRoomType)?.name }}</span>
               </div>
             </div>
             

@@ -2,7 +2,11 @@
 
 namespace App\Http\Controllers;
 
-use App\Models\Reservation;
+use App\Models\Reserva;
+use App\Models\Habitacion;
+use App\Models\TipoHabitacion;
+use App\Models\Huesped;
+use App\Models\DetalleReserva;
 use Illuminate\Http\Request;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Support\Facades\Auth;
@@ -15,125 +19,135 @@ class ReservationController extends Controller
      */
     public function index(): JsonResponse
     {
-        $reservations = Reservation::forUser(Auth::id())
+        $reservas = Reserva::where('id_usuario', Auth::id())
+            ->with(['huesped', 'detalleReservas.habitacion.tipoHabitacion'])
             ->orderBy('created_at', 'desc')
             ->get();
 
         return response()->json([
             'success' => true,
-            'data' => $reservations
+            'data' => $reservas
         ]);
     }
 
     /**
-     * Crear una nueva reserva
+     * Crear una nueva reserva usando los modelos existentes
      */
     public function store(Request $request): JsonResponse
     {
         // Validar los datos
         $validated = $request->validate([
-            'room_type' => 'required|string|in:suite-deluxe,habitacion-estandar,suite-familiar',
-            'room_name' => 'required|string|max:255',
-            'price_per_night' => 'required|numeric|min:0',
-            'check_in_date' => 'required|date|after_or_equal:today',
-            'check_out_date' => 'required|date|after:check_in_date',
-            'guest_name' => 'required|string|max:255',
-            'guest_email' => 'required|email|max:255',
-            'guest_phone' => 'nullable|string|max:20',
-            'special_requests' => 'nullable|string|max:1000',
+            'tipo_habitacion_id' => 'required|exists:tipo_habitaciones,id_tipo_habitacion',
+            'fecha_checkin' => 'required|date|after_or_equal:today',
+            'fecha_checkout' => 'required|date|after:fecha_checkin',
+            'cantidad_personas' => 'required|integer|min:1|max:10',
+            'nombre_huesped' => 'required|string|max:255',
+            'apellido_paterno' => 'required|string|max:255',
+            'apellido_materno' => 'nullable|string|max:255',
+            'email_huesped' => 'required|email|max:255',
+            'telefono_huesped' => 'nullable|string|max:20',
+            'observaciones' => 'nullable|string|max:1000',
         ]);
 
-        // Verificar disponibilidad (opcional - por ahora permitimos todas)
-        $checkIn = Carbon::parse($validated['check_in_date']);
-        $checkOut = Carbon::parse($validated['check_out_date']);
+        // Obtener el tipo de habitación
+        $tipoHabitacion = TipoHabitacion::find($validated['tipo_habitacion_id']);
+        
+        // Buscar una habitación disponible del tipo seleccionado
+        $habitacionDisponible = Habitacion::where('id_tipo_habitacion', $validated['tipo_habitacion_id'])
+            ->where('estado', 'disponible')
+            ->first();
+
+        if (!$habitacionDisponible) {
+            return response()->json([
+                'success' => false,
+                'message' => 'No hay habitaciones disponibles de este tipo'
+            ], 400);
+        }
+
+        // Crear o encontrar el huésped
+        $huesped = Huesped::firstOrCreate(
+            ['email' => $validated['email_huesped']],
+            [
+                'nombre' => $validated['nombre_huesped'],
+                'apellido_paterno' => $validated['apellido_paterno'],
+                'apellido_materno' => $validated['apellido_materno'] ?? null,
+                'telefono' => $validated['telefono_huesped'] ?? null,
+                'email' => $validated['email_huesped'],
+            ]
+        );
+
+        // Calcular fechas y totales
+        $checkIn = Carbon::parse($validated['fecha_checkin']);
+        $checkOut = Carbon::parse($validated['fecha_checkout']);
+        $noches = $checkIn->diffInDays($checkOut);
+        $subtotal = $tipoHabitacion->precio_noche * $noches;
+        $impuestos = $subtotal * 0.16; // 16% de impuestos
+        $total = $subtotal + $impuestos;
 
         // Crear la reserva
-        $reservation = Reservation::create([
-            'user_id' => Auth::id(),
-            'room_type' => $validated['room_type'],
-            'room_name' => $validated['room_name'],
-            'price_per_night' => $validated['price_per_night'],
-            'check_in_date' => $checkIn,
-            'check_out_date' => $checkOut,
-            'guest_name' => $validated['guest_name'],
-            'guest_email' => $validated['guest_email'],
-            'guest_phone' => $validated['guest_phone'] ?? null,
-            'special_requests' => $validated['special_requests'] ?? null,
-            'status' => 'pending',
+        $reserva = Reserva::create([
+            'id_huesped' => $huesped->id_huesped,
+            'id_usuario' => Auth::id(),
+            'fecha_checkin' => $checkIn,
+            'fecha_checkout' => $checkOut,
+            'cantidad_personas' => $validated['cantidad_personas'],
+            'estado' => 'pendiente',
+            'subtotal' => $subtotal,
+            'impuestos' => $impuestos,
+            'total' => $total,
+            'observaciones' => $validated['observaciones'] ?? null,
         ]);
+
+        // Crear el detalle de la reserva
+        DetalleReserva::create([
+            'id_reserva' => $reserva->id_reserva,
+            'id_habitacion' => $habitacionDisponible->id_habitacion,
+            'precio_noche' => $tipoHabitacion->precio_noche,
+            'cantidad_noches' => $noches,
+            'subtotal' => $subtotal,
+        ]);
+
+        // Marcar la habitación como ocupada
+        $habitacionDisponible->update(['estado' => 'ocupada']);
+
+        // Cargar las relaciones para la respuesta
+        $reserva->load(['huesped', 'detalleReservas.habitacion.tipoHabitacion']);
 
         return response()->json([
             'success' => true,
             'message' => 'Reserva creada exitosamente',
-            'data' => $reservation
+            'data' => $reserva
         ], 201);
     }
 
     /**
      * Obtener una reserva específica
      */
-    public function show(Reservation $reservation): JsonResponse
+    public function show(Reserva $reserva): JsonResponse
     {
         // Verificar que la reserva pertenece al usuario autenticado
-        if ($reservation->user_id !== Auth::id()) {
+        if ($reserva->id_usuario !== Auth::id()) {
             return response()->json([
                 'success' => false,
                 'message' => 'No autorizado'
             ], 403);
         }
 
-        return response()->json([
-            'success' => true,
-            'data' => $reservation
-        ]);
-    }
-
-    /**
-     * Actualizar una reserva
-     */
-    public function update(Request $request, Reservation $reservation): JsonResponse
-    {
-        // Verificar que la reserva pertenece al usuario autenticado
-        if ($reservation->user_id !== Auth::id()) {
-            return response()->json([
-                'success' => false,
-                'message' => 'No autorizado'
-            ], 403);
-        }
-
-        // Solo permitir actualizar si está pendiente
-        if ($reservation->status !== 'pending') {
-            return response()->json([
-                'success' => false,
-                'message' => 'No se puede modificar una reserva confirmada'
-            ], 400);
-        }
-
-        $validated = $request->validate([
-            'check_in_date' => 'sometimes|date|after_or_equal:today',
-            'check_out_date' => 'sometimes|date|after:check_in_date',
-            'guest_name' => 'sometimes|string|max:255',
-            'guest_email' => 'sometimes|email|max:255',
-            'guest_phone' => 'nullable|string|max:20',
-            'special_requests' => 'nullable|string|max:1000',
-        ]);
-
-        $reservation->update($validated);
+        $reserva->load(['huesped', 'detalleReservas.habitacion.tipoHabitacion']);
 
         return response()->json([
             'success' => true,
-            'message' => 'Reserva actualizada exitosamente',
-            'data' => $reservation
+            'data' => $reserva
         ]);
     }
 
     /**
      * Cancelar una reserva
      */
-    public function cancel(Reservation $reservation): JsonResponse
+    public function cancel(Reserva $reserva): JsonResponse
     {
         // Verificar que la reserva pertenece al usuario autenticado
-        if ($reservation->user_id !== Auth::id()) {
+        if ($reserva->id_usuario !== Auth::id()) {
             return response()->json([
                 'success' => false,
                 'message' => 'No autorizado'
@@ -141,19 +155,24 @@ class ReservationController extends Controller
         }
 
         // Solo permitir cancelar si está pendiente o confirmada
-        if (!in_array($reservation->status, ['pending', 'confirmed'])) {
+        if (!in_array($reserva->estado, ['pendiente', 'confirmada'])) {
             return response()->json([
                 'success' => false,
                 'message' => 'No se puede cancelar esta reserva'
             ], 400);
         }
 
-        $reservation->update(['status' => 'cancelled']);
+        // Liberar la habitación
+        foreach ($reserva->detalleReservas as $detalle) {
+            $detalle->habitacion->update(['estado' => 'disponible']);
+        }
+
+        $reserva->update(['estado' => 'cancelada']);
 
         return response()->json([
             'success' => true,
             'message' => 'Reserva cancelada exitosamente',
-            'data' => $reservation
+            'data' => $reserva
         ]);
     }
 
@@ -162,33 +181,26 @@ class ReservationController extends Controller
      */
     public function getRoomTypes(): JsonResponse
     {
-        $roomTypes = [
-            [
-                'id' => 'suite-deluxe',
-                'name' => 'Suite Deluxe',
-                'description' => 'Habitación amplia con vista al mar',
-                'price' => 95,
-                'image' => '/images/suite-deluxe.jpg'
-            ],
-            [
-                'id' => 'habitacion-estandar',
-                'name' => 'Habitación Estándar',
-                'description' => 'Cómoda habitación con todas las comodidades',
-                'price' => 65,
-                'image' => '/images/habitacion-estandar.jpg'
-            ],
-            [
-                'id' => 'suite-familiar',
-                'name' => 'Suite Familiar',
-                'description' => 'Perfecta para familias hasta 4 personas',
-                'price' => 120,
-                'image' => '/images/suite-familiar.jpg'
-            ]
-        ];
+        $tiposHabitacion = TipoHabitacion::where('activo', true)
+            ->withCount(['habitaciones' => function($query) {
+                $query->where('estado', 'disponible');
+            }])
+            ->get()
+            ->map(function($tipo) {
+                return [
+                    'id' => $tipo->id_tipo_habitacion,
+                    'name' => $tipo->nombre,
+                    'description' => $tipo->descripcion,
+                    'price' => $tipo->precio_noche,
+                    'capacity' => $tipo->capacidad_maxima,
+                    'available_rooms' => $tipo->habitaciones_count,
+                    'services' => $tipo->servicios_incluidos,
+                ];
+            });
 
         return response()->json([
             'success' => true,
-            'data' => $roomTypes
+            'data' => $tiposHabitacion
         ]);
     }
 }

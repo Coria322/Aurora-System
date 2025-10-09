@@ -147,7 +147,7 @@ const selectRoomType = (roomId: string) => {
 }
 
 // Función para continuar con la reserva
-const continueReservation = () => {
+const continueReservation = async () => {
   if (!checkInDate.value || !checkOutDate.value || !selectedRoomType.value) {
     alert('Por favor, completa todos los campos requeridos')
     return
@@ -155,16 +155,45 @@ const continueReservation = () => {
 
   const selectedRoom = roomTypes.find(room => room.id === selectedRoomType.value)
   
+  // Datos de la reserva para enviar al backend
   const reservationData = {
-    checkIn: checkInDate.value,
-    checkOut: checkOutDate.value,
-    roomType: selectedRoomType.value,
-    roomName: selectedRoom?.name || '',
-    price: selectedRoom?.price || 0
+    room_type: selectedRoomType.value,
+    room_name: selectedRoom?.name || '',
+    price_per_night: selectedRoom?.price || 0,
+    check_in_date: checkInDate.value,
+    check_out_date: checkOutDate.value,
+    guest_name: 'Usuario', // Por ahora usar nombre por defecto
+    guest_email: 'usuario@example.com', // Por ahora usar email por defecto
+    guest_phone: null,
+    special_requests: null
   }
 
-  emit('reservation:submit', reservationData)
-  isOpen.value = false
+  try {
+    // Enviar datos al backend
+    const response = await fetch('/api/reservations', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]')?.getAttribute('content') || ''
+      },
+      body: JSON.stringify(reservationData)
+    })
+
+    const result = await response.json()
+
+    if (result.success) {
+      alert(`¡Reserva creada exitosamente!\n\nReserva #${result.data.id}\nHabitación: ${result.data.room_name}\nFechas: ${result.data.check_in_date} - ${result.data.check_out_date}\nTotal: $${result.data.total_amount}`)
+      isOpen.value = false
+      
+      // Emitir evento para notificar al componente padre
+      emit('reservation:submit', result.data)
+    } else {
+      alert('Error al crear la reserva: ' + (result.message || 'Error desconocido'))
+    }
+  } catch (error) {
+    console.error('Error:', error)
+    alert('Error de conexión. Por favor, intenta nuevamente.')
+  }
 }
 
 // Función para cerrar modal

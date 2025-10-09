@@ -1,10 +1,10 @@
 <script setup lang="ts">
-import AppLogoIcon from '@/components/AppLogoIcon.vue';
-import { Link, usePage } from '@inertiajs/vue3';
+// import AppLogoIcon from '@/components/AppLogoIcon.vue'; // Removed unused import
+import { Link } from '@inertiajs/vue3';
 
-const page = usePage();
-const name = page.props.name;
-const quote = page.props.quote;
+// const page = usePage(); // Removed unused variable
+// const name = page.props.name; // Removed unused variable
+// const quote = page.props.quote; // Removed unused variable
 
 defineProps<{
     title?: string;

@@ -24,7 +24,7 @@ const isOpen = computed({
 const checkInDate = ref('')
 const checkOutDate = ref('')
 const selectedRoomType = ref('')
-const selectedDate = ref<Date | null>(null)
+// const selectedDate = ref<Date | null>(null) // Removed unused variable
 const isSelectingCheckIn = ref(true)
 
 // Tipos de habitación
@@ -82,7 +82,7 @@ const isDateSelected = (date: Date) => {
 const isDateInRange = (date: Date) => {
   if (!checkInDate.value || !checkOutDate.value) return false
   
-  const dateStr = formatDate(date)
+  // const dateStr = formatDate(date) // Removed unused variable
   const checkIn = new Date(checkInDate.value)
   const checkOut = new Date(checkOutDate.value)
   const currentDate = new Date(date)
@@ -127,19 +127,19 @@ const formatDate = (date: Date) => {
   })
 }
 
-// Función para formatear fecha para input
-const formatDateForInput = (dateStr: string) => {
-  if (!dateStr) return ''
-  const [day, month, year] = dateStr.split('/')
-  return `${year}-${month}-${day}`
-}
+// Función para formatear fecha para input (commented out - not used)
+// const formatDateForInput = (dateStr: string) => {
+//   if (!dateStr) return ''
+//   const [day, month, year] = dateStr.split('/')
+//   return `${year}-${month}-${day}`
+// }
 
-// Función para formatear fecha desde input
-const formatDateFromInput = (dateStr: string) => {
-  if (!dateStr) return ''
-  const date = new Date(dateStr)
-  return formatDate(date)
-}
+// Función para formatear fecha desde input (commented out - not used)
+// const formatDateFromInput = (dateStr: string) => {
+//   if (!dateStr) return ''
+//   const date = new Date(dateStr)
+//   return formatDate(date)
+// }
 
 // Función para seleccionar habitación
 const selectRoomType = (roomId: string) => {

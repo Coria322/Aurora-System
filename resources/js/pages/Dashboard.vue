@@ -5,7 +5,7 @@ import { type BreadcrumbItem } from '@/types';
 import { Head } from '@inertiajs/vue3';
 import PlaceholderPattern from '../components/PlaceholderPattern.vue';
 import ReservationModal from '../components/ReservationModal.vue';
-import { Button } from '../components/ui/button';
+// import { Button } from '../components/ui/button'; // Removed unused import
 
 const breadcrumbs: BreadcrumbItem[] = [
     {

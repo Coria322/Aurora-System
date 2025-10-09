@@ -20,7 +20,7 @@ return new class extends Migration
             $table->enum('tipo_documento', ['INE', 'Pasaporte', 'Cédula Profesional', 'Otro']);
             $table->string('telefono', 10)->nullable();
             $table->string('email', 100)->nullable();
-            $table->date('fecha_nacimiento');
+            $table->date('fecha_nacimiento')->nullable();
             $table->string('direccion', 150);
             $table->string('ciudad', 50);
             $table->string('pais', 50);

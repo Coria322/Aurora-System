@@ -1,0 +1,174 @@
+@import url('https://fonts.googleapis.com/css2?family=EB+Garamond:ital,wght@0,400..800;1,400..800&family=Rubik:ital,wght@0,300..900;1,300..900&display=swap');
+
+/*
+    Variables globales
+*/
+:root {
+    /* COLORES */
+    --color-on-primary: #fff;
+    --color-on-secondary: #000;
+    --color-primary: #113f67;
+    --color-secondary: #34699A;
+    --color-secondary-var: #58A0C8;
+    --color-of-sand: #fdf5AA;
+    --color-bg: #fafafa;
+    --color-error: #d32f2f;
+    
+    /* FUENTES */
+    --font-title: 'EB Garamond', serif; /* Se agrega 'serif' como fallback */
+    --font-text: 'Rubik', sans-serif;   /* Se agrega 'sans-serif' como fallback */
+
+    /* TAMAÑOS */
+    --small: 15px;
+    --mid: 20px;
+    --logo-text: 25px;
+    --title: 30px;
+}
+
+
+/* --- Estilos de la Barra de Navegación --- */
+.navbar {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    height: 80px;
+    width: 100%;
+    background-color: var(--color-primary);
+    padding: 2%;
+}
+
+.navbar__brand {
+    display: flex;
+    align-items: center;
+    text-decoration: none;
+}
+
+.navbar__logo {
+    width: 50px;
+    height: 50px;
+    border-radius: 50%;
+    margin-right: 15px;
+}
+
+.navbar__brand-name {
+    color: var(--color-on-primary);
+    font-family: var(--font-title);
+    font-size: var(--mid);
+    text-decoration: none;
+}
+
+.navbar__brand-name strong {
+    font-size: var(--logo-text);
+    display: block;
+    line-height: 1;
+}
+
+.navbar__brand-name span {
+    font-size: 14px;
+    font-family: var(--font-text);
+    font-weight: 300;
+}
+
+.navbar__menu {
+    display: flex;
+    align-items: center;
+}
+
+.navbar__links {
+    list-style: none;
+    display: flex;
+    gap: 2rem; /* Espacio entre los enlaces */
+    margin-right: 2rem;
+}
+
+.navbar__link {
+    color: var(--color-on-primary);
+    text-decoration: none;
+    font-size: var(--small);
+    padding: 5px 0;
+    position: relative;
+    transition: transform 0.3s ease;
+}
+
+.navbar__link::after{
+
+}
+
+/* Botón de Reservar */
+.navbar__reserve-btn {
+    background-color: var(--color-on-primary);
+    color: var(--color-primary);
+    font-weight: bold;
+    padding: 10px 20px;
+    border-radius: 20px;
+    text-decoration: none;
+    transition: background-color 0.3s, color 0.3s;
+    font-size: var(--small);
+}
+
+.navbar__reserve-btn:hover {
+    background-color: #f0f0f0;
+}
+
+/* Botón de Hamburguesa (inicialmente oculto) */
+.navbar__toggle {
+    display: none;
+    background: none;
+    border: none;
+    cursor: pointer;
+}
+
+.navbar__toggle-bar {
+    display: block;
+    width: 25px;
+    height: 3px;
+    margin: 5px 0;
+    background-color: var(--color-on-primary);
+    transition: all 0.3s ease-in-out;
+}
+
+/* Animaciones */
+
+
+
+/* --- Diseño Responsivo (para pantallas de 768px o menos) --- */
+@media (max-width: 768px) {
+    .navbar__toggle {
+        display: block; /* Muestra el botón de hamburguesa */
+    }
+
+    .navbar__menu {
+        display: none; /* Oculta el menú por defecto */
+        position: absolute;
+        top: 80px; /* Justo debajo del navbar */
+        left: 0;
+        width: 100%;
+        background-color: var(--color-primary);
+        flex-direction: column;
+        align-items: center;
+        padding: 1rem 0;
+    }
+
+    /* Clase que se añade con JS para mostrar el menú */
+    .navbar__menu.is-active {
+        display: flex;
+    }
+
+    .navbar__links {
+        flex-direction: column;
+        gap: 1.5rem;
+        margin: 0 0 1.5rem 0; /* Quita el margen derecho y añade uno inferior */
+        text-align: center;
+    }
+
+    /* Animación de la hamburguesa a una 'X' */
+    .navbar__toggle.is-active .navbar__toggle-bar:nth-child(1) {
+        transform: translateY(8px) rotate(45deg);
+    }
+    .navbar__toggle.is-active .navbar__toggle-bar:nth-child(2) {
+        opacity: 0;
+    }
+    .navbar__toggle.is-active .navbar__toggle-bar:nth-child(3) {
+        transform: translateY(-8px) rotate(-45deg);
+    }
+}

@@ -271,6 +271,108 @@ Route::get('/disponibilidad-test', function (Request $request) {
 });
 
 /**
+ * Crear reserva pública - VERSIÓN SIMPLIFICADA
+ * POST /api/reservas/crear-publico
+ */
+Route::post('/reservas/crear-publico', function (Request $request) {
+    try {
+        // Validar datos básicos
+        $fechaInicio = $request->get('fecha_inicio');
+        $fechaFin = $request->get('fecha_fin');
+        $tipoHabitacionId = $request->get('tipo_habitacion_id');
+        $cantidadPersonas = $request->get('cantidad_personas', 1);
+        $nombre = $request->get('nombre', 'Cliente');
+        $email = $request->get('email', 'cliente@test.com');
+        
+        if (!$fechaInicio || !$fechaFin || !$tipoHabitacionId) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Fechas y tipo de habitación son requeridos'
+            ], 400);
+        }
+
+        // Buscar habitación disponible
+        $habitacionDisponible = \App\Models\Habitacion::where('id_tipo_habitacion', $tipoHabitacionId)
+            ->where('estado', 'disponible')
+            ->first();
+
+        if (!$habitacionDisponible) {
+            return response()->json([
+                'success' => false,
+                'message' => 'No hay habitaciones disponibles'
+            ], 400);
+        }
+
+        // Crear huésped temporal
+        $huesped = \App\Models\Huesped::create([
+            'nombre' => $nombre,
+            'apellido_paterno' => 'Temporal',
+            'apellido_materno' => 'Temporal',
+            'email' => $email,
+            'telefono' => '0000000000',
+            'tipo_documento' => 'cedula',
+            'documento_identidad' => '0000000000'
+        ]);
+
+        // Calcular totales
+        $tipoHabitacion = \App\Models\TipoHabitacion::find($tipoHabitacionId);
+        $fechaInicioCarbon = \Carbon\Carbon::parse($fechaInicio);
+        $fechaFinCarbon = \Carbon\Carbon::parse($fechaFin);
+        $numeroNoches = $fechaInicioCarbon->diffInDays($fechaFinCarbon);
+        $subtotal = $tipoHabitacion->precio_noche * $numeroNoches;
+        $impuestos = $subtotal * 0.16;
+        $total = $subtotal + $impuestos;
+
+        // Crear reserva
+        $reserva = \App\Models\Reserva::create([
+            'id_huesped' => $huesped->id_huesped,
+            'id_usuario' => 1,
+            'fecha_checkin' => $fechaInicioCarbon,
+            'fecha_checkout' => $fechaFinCarbon,
+            'cantidad_personas' => $cantidadPersonas,
+            'estado' => 'confirmada',
+            'subtotal' => $subtotal,
+            'impuestos' => $impuestos,
+            'total' => $total,
+            'observaciones' => 'Reserva creada desde sistema público'
+        ]);
+
+        // Crear detalle de reserva
+        \App\Models\DetalleReserva::create([
+            'id_reserva' => $reserva->id_reserva,
+            'id_habitacion' => $habitacionDisponible->id_habitacion,
+            'fecha_inicio' => $fechaInicioCarbon,
+            'fecha_fin' => $fechaFinCarbon,
+            'precio_noche' => $tipoHabitacion->precio_noche,
+            'numero_noches' => $numeroNoches,
+            'subtotal' => $subtotal
+        ]);
+
+        // Actualizar estado de la habitación
+        $habitacionDisponible->update(['estado' => 'ocupada']);
+
+        return response()->json([
+            'success' => true,
+            'message' => 'Reserva creada exitosamente',
+            'data' => [
+                'id_reserva' => $reserva->id_reserva,
+                'numero_reserva' => 'RES-' . str_pad($reserva->id_reserva, 6, '0', STR_PAD_LEFT),
+                'fecha_inicio' => $fechaInicioCarbon->format('Y-m-d'),
+                'fecha_fin' => $fechaFinCarbon->format('Y-m-d'),
+                'total' => $total,
+                'habitacion' => $habitacionDisponible->numero_habitacion
+            ]
+        ]);
+
+    } catch (\Exception $e) {
+        return response()->json([
+            'success' => false,
+            'message' => 'Error al crear reserva: ' . $e->getMessage()
+        ], 500);
+    }
+});
+
+/**
  * Endpoint de prueba simple
  * GET /api/test
  */

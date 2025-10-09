@@ -267,17 +267,13 @@ const crearReserva = async () => {
       fecha_inicio: formatDateForAPI(checkInDate.value),
       fecha_fin: formatDateForAPI(checkOutDate.value),
       tipo_habitacion_id: parseInt(selectedRoomType.value),
-      usuario_id: 1, // Por ahora usar ID fijo, debería venir del usuario autenticado
       cantidad_personas: cantidadPersonas.value,
-      nombre_huesped: huespedData.value.nombre,
-      apellido_paterno: huespedData.value.apellido_paterno,
-      apellido_materno: huespedData.value.apellido_materno || null,
-      email_huesped: huespedData.value.email,
-      telefono_huesped: huespedData.value.telefono || null,
-      observaciones: huespedData.value.observaciones || null
+      nombre: huespedData.value.nombre,
+      email: huespedData.value.email,
+      telefono: huespedData.value.telefono || null
     }
 
-    const response = await api.post('/reservas/crear', reservationData)
+    const response = await api.post('/reservas/crear-publico', reservationData)
     
     if (response.data.success) {
       const reserva = response.data.data

@@ -1,9 +1,9 @@
 <script setup lang="ts">
-import { ref, computed, onMounted } from 'vue'
+import { computed, onMounted } from 'vue'
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
-import axios from 'axios'
+import { useReservationModal } from '@/composables/useReservation'
 
 // Props y emits
 const props = defineProps<{
@@ -22,313 +22,58 @@ const isOpen = computed({
   set: (value) => emit('update:open', value)
 })
 
-// Configuración de axios
-const api = axios.create({
-  baseURL: '/api',
-  headers: {
-    'Content-Type': 'application/json',
-    'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]')?.getAttribute('content') || ''
-  }
-})
-
-// Estados de loading
-const isLoadingAvailability = ref(false)
-const isLoadingReservation = ref(false)
-const isLoadingRoomTypes = ref(false)
-
-// Estados de notificaciones
-const notification = ref({
-  show: false,
-  type: 'success' as 'success' | 'error' | 'info',
-  message: ''
-})
-
-// Datos de la reserva
-const checkInDate = ref('')
-const checkOutDate = ref('')
-const selectedRoomType = ref('')
-const isSelectingCheckIn = ref(true)
-const cantidadPersonas = ref(2)
-
-// Datos del huésped
-const huespedData = ref({
-  nombre: '',
-  apellido_paterno: '',
-  apellido_materno: '',
-  email: '',
-  telefono: '',
-  observaciones: ''
-})
-
-// Tipos de habitación (se cargarán desde el backend)
-const roomTypes = ref([])
-const availabilityData = ref(null)
-
-// Días de la semana
-const weekDays = ['Dom', 'Lun', 'Mar', 'Mie', 'Jue', 'Vie', 'Sab']
-
-// Calcular fechas para el calendario
-const generateCalendarDates = () => {
-  const today = new Date()
-  const dates = []
-  
-  // Generar 35 días (5 semanas)
-  for (let i = 0; i < 35; i++) {
-    const date = new Date(today)
-    date.setDate(today.getDate() + i)
-    dates.push(date)
-  }
-  
-  return dates
-}
-
-const calendarDates = ref(generateCalendarDates())
-
-// Función para mostrar notificaciones
-const showNotification = (type: 'success' | 'error' | 'info', message: string) => {
-  notification.value = {
-    show: true,
-    type,
-    message
-  }
-  
-  // Auto-hide después de 5 segundos
-  setTimeout(() => {
-    notification.value.show = false
-  }, 5000)
-}
-
-// Función para verificar si una fecha está seleccionada
-const isDateSelected = (date: Date) => {
-  const dateStr = formatDate(date)
-  return checkInDate.value === dateStr || checkOutDate.value === dateStr
-}
-
-// Función para verificar si una fecha está en el rango seleccionado
-const isDateInRange = (date: Date) => {
-  if (!checkInDate.value || !checkOutDate.value) return false
-  
-  const checkIn = new Date(checkInDate.value)
-  const checkOut = new Date(checkOutDate.value)
-  const currentDate = new Date(date)
-  
-  return currentDate > checkIn && currentDate < checkOut
-}
-
-// Función para verificar si una fecha está disponible
-const isDateAvailable = (date: Date) => {
-  const today = new Date()
-  today.setHours(0, 0, 0, 0)
-  return date >= today
-}
-
-// Función para seleccionar fecha del calendario
-const selectCalendarDate = (date: Date) => {
-  if (!isDateAvailable(date)) return
-  
-  const dateStr = formatDate(date)
-  
-  if (isSelectingCheckIn.value) {
-    checkInDate.value = dateStr
-    isSelectingCheckIn.value = false
-  } else {
-    if (new Date(dateStr) > new Date(checkInDate.value)) {
-      checkOutDate.value = dateStr
-      isSelectingCheckIn.value = true
-    } else {
-      // Si la fecha de salida es anterior a la de entrada, intercambiar
-      checkOutDate.value = checkInDate.value
-      checkInDate.value = dateStr
-      isSelectingCheckIn.value = true
-    }
-  }
-}
-
-// Función para formatear fecha
-const formatDate = (date: Date) => {
-  return date.toLocaleDateString('es-ES', {
-    day: '2-digit',
-    month: '2-digit',
-    year: 'numeric'
-  })
-}
-
-// Función para formatear fecha para API
-const formatDateForAPI = (dateStr: string) => {
-  // Si ya está en formato YYYY-MM-DD (de input type="date"), devolverlo tal como está
-  if (dateStr.includes('-')) {
-    return dateStr
-  }
-  // Si está en formato DD/MM/YYYY (del calendario), convertir a YYYY-MM-DD
-  const [day, month, year] = dateStr.split('/')
-  return `${year}-${month.padStart(2, '0')}-${day.padStart(2, '0')}`
-}
-
-// Función para seleccionar habitación
-const selectRoomType = (roomId: string) => {
-  selectedRoomType.value = roomId
-}
-
-// Cargar tipos de habitaciones al montar el componente
-const cargarTiposHabitaciones = async () => {
-  try {
-    isLoadingRoomTypes.value = true
-    const response = await api.get('/habitaciones/tipos-publico')
-    
-    if (response.data.success) {
-      roomTypes.value = response.data.data.map((tipo: any) => ({
-        id: tipo.id_tipo_habitacion,
-        name: tipo.nombre,
-        description: tipo.descripcion,
-        price: tipo.precio_noche,
-        capacity: tipo.capacidad_maxima,
-        available_rooms: tipo.habitaciones_disponibles,
-        services: tipo.servicios_incluidos
-      }))
-    }
-  } catch (error) {
-    console.error('Error cargando tipos de habitaciones:', error)
-    showNotification('error', 'Error al cargar los tipos de habitaciones')
-  } finally {
-    isLoadingRoomTypes.value = false
-  }
-}
-
-// Método para buscar disponibilidad
-const buscarDisponibilidad = async () => {
-  if (!checkInDate.value || !checkOutDate.value) {
-    showNotification('error', 'Por favor, selecciona las fechas de entrada y salida')
-    return
-  }
-
-  // Validar que la fecha de salida sea posterior a la de entrada
-  const fechaInicio = new Date(formatDateForAPI(checkInDate.value))
-  const fechaFin = new Date(formatDateForAPI(checkOutDate.value))
-  
-  if (fechaFin <= fechaInicio) {
-    showNotification('error', 'La fecha de salida debe ser posterior a la fecha de entrada')
-    return
-  }
-
-  try {
-    isLoadingAvailability.value = true
-    
-    const params = {
-      fecha_inicio: formatDateForAPI(checkInDate.value),
-      fecha_fin: formatDateForAPI(checkOutDate.value)
-    }
-
-    const response = await api.get('/disponibilidad-test', { params })
-    
-    if (response.data.success) {
-      availabilityData.value = response.data
-      
-      if (response.data.disponible) {
-        showNotification('success', `¡Disponible! ${response.data.total_habitaciones_disponibles} habitaciones disponibles`)
-        
-        // Actualizar información de disponibilidad en roomTypes
-        roomTypes.value = roomTypes.value.map(room => {
-          const tipoDisponible = response.data.tipos_disponibles.find(
-            (tipo: any) => tipo.id_tipo_habitacion === room.id
-          )
-          return {
-            ...room,
-            available_rooms: tipoDisponible ? tipoDisponible.habitaciones_disponibles : 0
-          }
-        })
-      } else {
-        showNotification('error', 'No hay habitaciones disponibles para las fechas seleccionadas')
-      }
-    }
-  } catch (error) {
-    console.error('Error verificando disponibilidad:', error)
-    showNotification('error', 'Error al verificar disponibilidad. Intenta nuevamente.')
-  } finally {
-    isLoadingAvailability.value = false
-  }
-}
-
-// Método para crear reserva
-const crearReserva = async () => {
-  if (!checkInDate.value || !checkOutDate.value || !selectedRoomType.value) {
-    showNotification('error', 'Por favor, completa todos los campos requeridos')
-    return
-  }
-
-  // Validar datos del huésped
-  if (!huespedData.value.nombre || !huespedData.value.apellido_paterno || !huespedData.value.email) {
-    showNotification('error', 'Por favor, completa los datos del huésped')
-    return
-  }
-
-  try {
-    isLoadingReservation.value = true
-    
-    const reservationData = {
-      fecha_inicio: formatDateForAPI(checkInDate.value),
-      fecha_fin: formatDateForAPI(checkOutDate.value),
-      tipo_habitacion_id: parseInt(selectedRoomType.value),
-      cantidad_personas: cantidadPersonas.value,
-      nombre: huespedData.value.nombre,
-      email: huespedData.value.email,
-      telefono: huespedData.value.telefono || null
-    }
-
-    const response = await api.post('/reservas/crear-publico', reservationData)
-    
-    if (response.data.success) {
-      const reserva = response.data.data
-      const selectedRoom = roomTypes.value.find(room => room.id.toString() === selectedRoomType.value)
-      
-      showNotification('success', `¡Reserva creada exitosamente! Reserva #${reserva.id_reserva}`)
-      
-      // Emitir evento para notificar al componente padre
-      emit('reservation:submit', reserva)
-      
-      // Cerrar modal después de un breve delay
-      setTimeout(() => {
-        isOpen.value = false
-        resetForm()
-      }, 2000)
-    }
-  } catch (error: any) {
-    console.error('Error creando reserva:', error)
-    
-    let errorMessage = 'Error al crear la reserva'
-    if (error.response?.data?.message) {
-      errorMessage = error.response.data.message
-    } else if (error.response?.data?.errors) {
-      const errors = Object.values(error.response.data.errors).flat()
-      errorMessage = errors.join(', ')
-    }
-    
-    showNotification('error', errorMessage)
-  } finally {
-    isLoadingReservation.value = false
-  }
-}
-
-// Función para resetear el formulario
-const resetForm = () => {
-  checkInDate.value = ''
-  checkOutDate.value = ''
-  selectedRoomType.value = ''
-  cantidadPersonas.value = 2
-  huespedData.value = {
-    nombre: '',
-    apellido_paterno: '',
-    apellido_materno: '',
-    email: '',
-    telefono: '',
-    observaciones: ''
-  }
-  availabilityData.value = null
-}
+// Usar el composable
+const {
+  isLoadingAvailability,
+  isLoadingReservation,
+  isLoadingRoomTypes,
+  notification,
+  checkInDate,
+  checkOutDate,
+  selectedRoomType,
+  isSelectingCheckIn,
+  cantidadPersonas,
+  huespedData,
+  roomTypes,
+  availabilityData,
+  weekDays,
+  calendarDates,
+  showNotification,
+  isDateSelected,
+  isDateInRange,
+  isDateAvailable,
+  selectCalendarDate,
+  selectRoomType,
+  formatDate,
+  cargarTiposHabitaciones,
+  buscarDisponibilidad,
+  crearReserva,
+  resetForm
+} = useReservationModal()
 
 // Función para cerrar modal
 const closeModal = () => {
   isOpen.value = false
   resetForm()
+}
+
+// Función para manejar la creación de reserva
+const handleCrearReserva = async () => {
+  try {
+    const reserva = await crearReserva()
+    
+    if (reserva) {
+      showNotification('success', `¡Reserva creada exitosamente! Reserva #${reserva.id_reserva}`)
+      emit('reservation:submit', reserva)
+      
+      setTimeout(() => {
+        isOpen.value = false
+        resetForm()
+      }, 2000)
+    }
+  } catch (error) {
+    // El error ya se maneja en el composable
+  }
 }
 
 // Cargar tipos de habitaciones al montar el componente
@@ -350,15 +95,6 @@ onMounted(() => {
             </div>
             <DialogTitle class="text-2xl font-bold">Sistema Reservas</DialogTitle>
           </div>
-          <button 
-            @click="() => { isOpen = false; emit('close') }"
-            class="text-white hover:text-gray-300 transition-colors duration-200 p-2 rounded-full hover:bg-blue-800"
-            aria-label="Cerrar modal"
-          >
-            <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path>
-            </svg>
-          </button>
         </div>
       </DialogHeader>
 
@@ -696,7 +432,7 @@ onMounted(() => {
             </div>
             
             <Button 
-              @click="crearReserva"
+              @click="handleCrearReserva"
               :disabled="!checkInDate || !checkOutDate || !selectedRoomType || isLoadingReservation"
               class="bg-blue-900 hover:bg-blue-800 text-white px-6 py-2 disabled:bg-gray-400 disabled:cursor-not-allowed"
             >

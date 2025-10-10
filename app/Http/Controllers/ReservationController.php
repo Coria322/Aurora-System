@@ -194,6 +194,7 @@ class ReservationController extends Controller
                 ], 400);
             }
 
+            //TODO: FIX. Utilizar el Scope diseñado para traer las habitaciones entre fechas
             // Contar habitaciones disponibles (sin validaciones complejas)
             $totalHabitaciones = Habitacion::where('estado', 'disponible')->count();
             

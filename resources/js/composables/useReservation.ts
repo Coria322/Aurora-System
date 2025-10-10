@@ -1,0 +1,329 @@
+import { ref, computed } from 'vue'
+import axios from 'axios'
+
+export function useReservationModal() {
+  // Configuración de axios
+  const api = axios.create({
+    baseURL: '/api',
+    headers: {
+      'Content-Type': 'application/json',
+      'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]')?.getAttribute('content') || ''
+    }
+  })
+
+  // Estados de loading
+  const isLoadingAvailability = ref(false)
+  const isLoadingReservation = ref(false)
+  const isLoadingRoomTypes = ref(false)
+
+  // Estados de notificaciones
+  const notification = ref({
+    show: false,
+    type: 'success' as 'success' | 'error' | 'info',
+    message: ''
+  })
+
+  // Datos de la reserva
+  const checkInDate = ref('')
+  const checkOutDate = ref('')
+  const selectedRoomType = ref('')
+  const isSelectingCheckIn = ref(true)
+  const cantidadPersonas = ref(2)
+
+  // Datos del huésped
+  const huespedData = ref({
+    nombre: '',
+    apellido_paterno: '',
+    apellido_materno: '',
+    email: '',
+    telefono: '',
+    observaciones: ''
+  })
+
+  // Tipos de habitación
+  interface RoomType {
+    id: number
+    name: string
+    description: string
+    price: number
+    capacity: number
+    available_rooms: number
+    services?: any
+  }
+
+  const roomTypes = ref<RoomType[]>([])
+  const availabilityData = ref<any | null>(null)
+
+  // Días de la semana
+  const weekDays = ['Dom', 'Lun', 'Mar', 'Mie', 'Jue', 'Vie', 'Sab']
+
+  // Funciones de utilidad
+  const formatDateForInput = (date: Date) => {
+    const yyyy = date.getFullYear()
+    const mm = (date.getMonth() + 1).toString().padStart(2, '0')
+    const dd = date.getDate().toString().padStart(2, '0')
+    return `${yyyy}-${mm}-${dd}`
+  }
+
+  const formatDate = (date: Date) => {
+    return date.toLocaleDateString('es-ES', {
+      day: '2-digit',
+      month: '2-digit',
+      year: 'numeric'
+    })
+  }
+
+  const formatDateForAPI = (dateStr: string) => {
+    if (dateStr.includes('-')) {
+      return dateStr
+    }
+    const [day, month, year] = dateStr.split('/')
+    return `${year}-${month.padStart(2, '0')}-${day.padStart(2, '0')}`
+  }
+
+  const generateCalendarDates = () => {
+    const today = new Date()
+    const dates = []
+    
+    for (let i = 0; i < 35; i++) {
+      const date = new Date(today)
+      date.setDate(today.getDate() + i)
+      dates.push(date)
+    }
+    
+    return dates
+  }
+
+  const calendarDates = ref(generateCalendarDates())
+
+  // Función para mostrar notificaciones
+  const showNotification = (type: 'success' | 'error' | 'info', message: string) => {
+    notification.value = {
+      show: true,
+      type,
+      message
+    }
+    
+    setTimeout(() => {
+      notification.value.show = false
+    }, 5000)
+  }
+
+  // Funciones de validación de fechas
+  const isDateSelected = (date: Date) => {
+    const dateStr = formatDate(date)
+    return checkInDate.value === dateStr || checkOutDate.value === dateStr
+  }
+
+  const isDateInRange = (date: Date) => {
+    if (!checkInDate.value || !checkOutDate.value) return false
+    
+    const checkIn = new Date(checkInDate.value)
+    const checkOut = new Date(checkOutDate.value)
+    const currentDate = new Date(date)
+    
+    return currentDate > checkIn && currentDate < checkOut
+  }
+
+  const isDateAvailable = (date: Date) => {
+    const today = new Date()
+    today.setHours(0, 0, 0, 0)
+    return date >= today
+  }
+
+  const selectCalendarDate = (date: Date) => {
+    if (!isDateAvailable(date)) return
+
+    const dateStrInput = formatDateForInput(date)
+
+    if (isSelectingCheckIn.value) {
+      checkInDate.value = dateStrInput
+      isSelectingCheckIn.value = false
+    } else {
+      if (new Date(dateStrInput) > new Date(checkInDate.value)) {
+        checkOutDate.value = dateStrInput
+        isSelectingCheckIn.value = true
+      } else {
+        checkOutDate.value = checkInDate.value
+        checkInDate.value = dateStrInput
+        isSelectingCheckIn.value = true
+      }
+    }
+  }
+
+  // Función para seleccionar habitación
+  const selectRoomType = (roomId: string) => {
+    selectedRoomType.value = roomId
+  }
+
+  // API Calls
+  const cargarTiposHabitaciones = async () => {
+    try {
+      isLoadingRoomTypes.value = true
+      const response = await api.get('/habitaciones/tipos-publico')
+      
+      if (response.data.success) {
+        roomTypes.value = response.data.data.map((tipo: any) => ({
+          id: tipo.id_tipo_habitacion,
+          name: tipo.nombre,
+          description: tipo.descripcion,
+          price: tipo.precio_noche,
+          capacity: tipo.capacidad_maxima,
+          available_rooms: tipo.habitaciones_disponibles,
+          services: tipo.servicios_incluidos
+        }))
+      }
+    } catch (error) {
+      console.error('Error cargando tipos de habitaciones:', error)
+      showNotification('error', 'Error al cargar los tipos de habitaciones')
+    } finally {
+      isLoadingRoomTypes.value = false
+    }
+  }
+
+  const buscarDisponibilidad = async () => {
+    if (!checkInDate.value || !checkOutDate.value) {
+      showNotification('error', 'Por favor, selecciona las fechas de entrada y salida')
+      return
+    }
+
+    const fechaInicio = new Date(formatDateForAPI(checkInDate.value))
+    const fechaFin = new Date(formatDateForAPI(checkOutDate.value))
+    
+    if (fechaFin <= fechaInicio) {
+      showNotification('error', 'La fecha de salida debe ser posterior a la fecha de entrada')
+      return
+    }
+
+    try {
+      isLoadingAvailability.value = true
+      
+      const params = {
+        fecha_inicio: formatDateForAPI(checkInDate.value),
+        fecha_fin: formatDateForAPI(checkOutDate.value)
+      }
+
+      const response = await api.get('/disponibilidad-test', { params })
+      
+      if (response.data.success) {
+        availabilityData.value = response.data
+        
+        if (response.data.disponible) {
+          showNotification('success', `¡Disponible! ${response.data.total_habitaciones_disponibles} habitaciones disponibles`)
+          
+          roomTypes.value = roomTypes.value.map(room => {
+            const tipoDisponible = response.data.tipos_disponibles.find(
+              (tipo: any) => tipo.id_tipo_habitacion === room.id
+            )
+            return {
+              ...room,
+              available_rooms: tipoDisponible ? tipoDisponible.habitaciones_disponibles : 0
+            }
+          })
+        } else {
+          showNotification('error', 'No hay habitaciones disponibles para las fechas seleccionadas')
+        }
+      }
+    } catch (error) {
+      console.error('Error verificando disponibilidad:', error)
+      showNotification('error', 'Error al verificar disponibilidad. Intenta nuevamente.')
+    } finally {
+      isLoadingAvailability.value = false
+    }
+  }
+
+  const crearReserva = async () => {
+    if (!checkInDate.value || !checkOutDate.value || !selectedRoomType.value) {
+      showNotification('error', 'Por favor, completa todos los campos requeridos')
+      return
+    }
+
+    if (!huespedData.value.nombre || !huespedData.value.apellido_paterno || !huespedData.value.email) {
+      showNotification('error', 'Por favor, completa los datos del huésped')
+      return
+    }
+
+    try {
+      isLoadingReservation.value = true
+      
+      const reservationData = {
+        fecha_inicio: formatDateForAPI(checkInDate.value),
+        fecha_fin: formatDateForAPI(checkOutDate.value),
+        tipo_habitacion_id: parseInt(selectedRoomType.value),
+        cantidad_personas: cantidadPersonas.value,
+        nombre: huespedData.value.nombre,
+        email: huespedData.value.email,
+        telefono: huespedData.value.telefono || null
+      }
+
+      const response = await api.post('/reservas/crear-publico', reservationData)
+      
+      if (response.data.success) {
+        return response.data.data
+      }
+    } catch (error: any) {
+      console.error('Error creando reserva:', error)
+      
+      let errorMessage = 'Error al crear la reserva'
+      if (error.response?.data?.message) {
+        errorMessage = error.response.data.message
+      } else if (error.response?.data?.errors) {
+        const errors = Object.values(error.response.data.errors).flat()
+        errorMessage = errors.join(', ')
+      }
+      
+      showNotification('error', errorMessage)
+      throw error
+    } finally {
+      isLoadingReservation.value = false
+    }
+  }
+
+  const resetForm = () => {
+    checkInDate.value = ''
+    checkOutDate.value = ''
+    selectedRoomType.value = ''
+    cantidadPersonas.value = 2
+    huespedData.value = {
+      nombre: '',
+      apellido_paterno: '',
+      apellido_materno: '',
+      email: '',
+      telefono: '',
+      observaciones: ''
+    }
+    availabilityData.value = null
+  }
+
+  return {
+    // Estados
+    isLoadingAvailability,
+    isLoadingReservation,
+    isLoadingRoomTypes,
+    notification,
+    checkInDate,
+    checkOutDate,
+    selectedRoomType,
+    isSelectingCheckIn,
+    cantidadPersonas,
+    huespedData,
+    roomTypes,
+    availabilityData,
+    weekDays,
+    calendarDates,
+    
+    // Funciones
+    showNotification,
+    isDateSelected,
+    isDateInRange,
+    isDateAvailable,
+    selectCalendarDate,
+    selectRoomType,
+    formatDate,
+    formatDateForAPI,
+    cargarTiposHabitaciones,
+    buscarDisponibilidad,
+    crearReserva,
+    resetForm
+  }
+}

@@ -10,8 +10,9 @@ use App\Models\DetalleReserva;
 use Illuminate\Http\Request;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Facades\Log;
 use Carbon\Carbon;
-
+use Illuminate\Support\Facades\DB;
 class ReservationController extends Controller
 {
     /**
@@ -87,7 +88,7 @@ class ReservationController extends Controller
         // Crear la reserva
         $reserva = Reserva::create([
             'id_huesped' => $huesped->id_huesped,
-            'id_usuario' => Auth::id(),
+            'id_usuario' => Auth::User()->id_usuario,
             'fecha_checkin' => $checkIn,
             'fecha_checkout' => $checkOut,
             'cantidad_personas' => $validated['cantidad_personas'],
@@ -180,42 +181,64 @@ class ReservationController extends Controller
      * Verificar disponibilidad de habitaciones - VERSIÓN SIMPLIFICADA
      * GET /api/reservas/disponibilidad
      */
-    public function verificarDisponibilidad(Request $request): JsonResponse
-    {
-        try {
-            // Validación básica
-            $fechaInicio = $request->get('fecha_inicio');
-            $fechaFin = $request->get('fecha_fin');
-            
-            if (!$fechaInicio || !$fechaFin) {
-                return response()->json([
-                    'success' => false,
-                    'message' => 'Fechas requeridas'
-                ], 400);
-            }
+public function verificarDisponibilidad(Request $request): JsonResponse
+{
+    try {
+        // Validación básica
+        $fechaInicio = $request->get('fecha_inicio');
+        $fechaFin = $request->get('fecha_fin');
 
-            //TODO: FIX. Utilizar el Scope diseñado para traer las habitaciones entre fechas
-            // Contar habitaciones disponibles (sin validaciones complejas)
-            $totalHabitaciones = Habitacion::where('estado', 'disponible')->count();
-            
-            return response()->json([
-                'success' => true,
-                'disponible' => $totalHabitaciones > 0,
-                'fecha_inicio' => $fechaInicio,
-                'fecha_fin' => $fechaFin,
-                'total_habitaciones_disponibles' => $totalHabitaciones,
-                'message' => 'Disponibilidad verificada correctamente'
-            ]);
-            
-        } catch (\Exception $e) {
+        if (!$fechaInicio || !$fechaFin) {
             return response()->json([
                 'success' => false,
-                'message' => 'Error: ' . $e->getMessage(),
-                'file' => $e->getFile(),
-                'line' => $e->getLine()
-            ], 500);
+                'message' => 'Fechas requeridas'
+            ], 400);
         }
+
+        // Obtener tipos de habitaciones activas
+        $tiposDisponibles = TipoHabitacion::Activas()
+            ->withCount(['habitaciones' => function($query) use ($fechaInicio, $fechaFin) {
+                $query->utilizables()->entre($fechaInicio, $fechaFin); // Solo las disponibles entre las fechas
+            }])
+            ->get()
+            ->map(function($tipo) {
+                return [
+                    'id_tipo_habitacion' => $tipo->id_tipo_habitacion,
+                    'nombre' => $tipo->nombre,
+                    'descripcion' => $tipo->descripcion,
+                    'capacidad_maxima' => $tipo->capacidad_maxima,
+                    'precio_noche' => $tipo->precio_noche,
+                    'servicios_incluidos' => $tipo->servicios_incluidos,
+                    'habitaciones_disponibles' => $tipo->habitaciones_count, // conteo filtrado
+                ];
+            })
+            ->values()
+            ->toArray();
+
+        // Total de habitaciones disponibles sumando por tipo
+        $totalHabitaciones = array_sum(array_column($tiposDisponibles, 'habitaciones_disponibles'));
+
+        Log::info('Tipos de habitaciones disponibles:', $tiposDisponibles);
+
+        return response()->json([
+            'success' => true,
+            'disponible' => $totalHabitaciones > 0,
+            'fecha_inicio' => $fechaInicio,
+            'fecha_fin' => $fechaFin,
+            'total_habitaciones_disponibles' => $totalHabitaciones,
+            'tipos_disponibles' => $tiposDisponibles,
+            'message' => 'Disponibilidad verificada correctamente'
+        ]);
+
+    } catch (\Exception $e) {
+        Log::error('Error verificarDisponibilidad: ' . $e->getMessage(), ['trace' => $e->getTraceAsString()]);
+        return response()->json([
+            'success' => false,
+            'message' => 'Error interno al verificar disponibilidad'
+        ], 500);
     }
+}
+
 
     /**
      * Crear nueva reserva simplificada
@@ -344,30 +367,176 @@ class ReservationController extends Controller
      * Listar tipos de habitaciones con precios
      * GET /api/habitaciones/tipos
      */
-    public function listarTiposHabitaciones(): JsonResponse
-    {
+public function listarTiposHabitaciones(Request $request, $fecha_inicio = null, $fecha_fin = null): JsonResponse
+{
+    try {
+
+        $fecha_inicio = $request->query('fecha_inicio');
+        $fecha_fin = $request->query('fecha_fin');
         $tiposHabitaciones = TipoHabitacion::where('activo', true)
-            ->withCount(['habitaciones' => function($query) {
-                $query->where('estado', 'disponible');
+            ->withCount(['habitaciones' => function() use ($fecha_inicio, $fecha_fin) {
+                Habitacion::entre($fecha_inicio ?? now()->format('Y-m-d'), $fecha_fin ?? now()->addDay()->format('Y-m-d'));
             }])
             ->get()
             ->map(function($tipo) {
                 return [
-                    'id_tipo_habitacion' => $tipo->id_tipo_habitacion,
-                    'nombre' => $tipo->nombre,
-                    'descripcion' => $tipo->descripcion,
-                    'capacidad_maxima' => $tipo->capacidad_maxima,
-                    'precio_noche' => $tipo->precio_noche,
-                    'servicios_incluidos' => $tipo->servicios_incluidos,
-                    'habitaciones_disponibles' => $tipo->habitaciones_count,
-                    'activo' => $tipo->activo
+                    'id_tipo_habitacion'     => $tipo->id_tipo_habitacion,
+                    'nombre'                 => $tipo->nombre,
+                    'descripcion'            => $tipo->descripcion,
+                    'capacidad_maxima'       => $tipo->capacidad_maxima,
+                    'precio_noche'           => $tipo->precio_noche,
+                    'servicios_incluidos'    => $tipo->servicios_incluidos,
+                    'habitaciones_disponibles'=> $tipo->habitaciones_count,
+                    'activo'                 => $tipo->activo
                 ];
-            });
+            })
+            ->values()   // <- reindexa la colección para evitar serializar como objeto
+            ->toArray(); // <- fuerza array plano para el JSO
 
         return response()->json([
-            'success' => true,
-            'data' => $tiposHabitaciones,
-            'total_tipos' => $tiposHabitaciones->count()
+            'success'     => true,
+            'data'        => $tiposHabitaciones,
+            'total_tipos' => count($tiposHabitaciones)
         ]);
+    } catch (\Exception $e) {
+        Log::error('listarTiposHabitaciones error: ' . $e->getMessage(), ['trace' => $e->getTraceAsString()]);
+
+        return response()->json([
+            'success' => false,
+            'message' => 'Error interno al listar tipos de habitaciones'
+        ], 500);
     }
+}
+
+
+public function crearPublico(Request $request): JsonResponse
+{
+    try {
+        // Validación básica (defaults permitidos para nombre/email)
+        $validated = $request->validate([
+            'fecha_inicio' => 'required|date|after_or_equal:today',
+            'fecha_fin' => 'required|date|after:fecha_inicio',
+            'tipo_habitacion_id' => 'required|exists:tipo_habitaciones,id_tipo_habitacion',
+            'cantidad_personas' => 'nullable|integer|min:1|max:10',
+            'nombre' => 'nullable|string|max:255',
+            'email' => 'nullable|email|max:255',
+        ]);
+
+        $fechaInicio = $validated['fecha_inicio'];
+        $fechaFin = $validated['fecha_fin'];
+        $tipoHabitacionId = $validated['tipo_habitacion_id'];
+        $cantidadPersonas = $validated['cantidad_personas'] ?? 1;
+        $nombre = $validated['nombre'] ?? 'Cliente';
+        $email = $validated['email'] ?? 'cliente@test.com';
+
+        // Usar transacción para evitar race conditions al reservar la habitación
+        return DB::transaction(function() use ($fechaInicio, $fechaFin, $tipoHabitacionId, $cantidadPersonas, $nombre, $email) {
+
+            // Buscar habitación disponible usando los scopes que ya usas en el proyecto
+            $habitacionDisponible = Habitacion::Utilizables()
+                ->porTipoId($tipoHabitacionId)
+                ->entre($fechaInicio, $fechaFin)
+                ->lockForUpdate() // evita que otra transacción la tome al mismo tiempo
+                ->first();
+
+            if (!$habitacionDisponible) {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'No hay habitaciones disponibles'
+                ], 400);
+            }
+
+            // Crear o reutilizar huésped por email (evita duplicados)
+            $huesped = Huesped::firstOrCreate(
+                ['email' => $email],
+                [
+                    'nombre' => $nombre,
+                    'apellido_paterno' => 'Temporal',
+                    'apellido_materno' => 'Temporal',
+                    'telefono' => '0000000000',
+                    'tipo_documento' => 'INE',
+                    'documento_identidad' => '0000000000',
+                    'fecha_nacimiento' => null,
+                    'direccion' => 'Dirección temporal',
+                    'ciudad' => 'Ciudad temporal',
+                    'pais' => 'México'
+                ]
+            );
+
+            $tipoHabitacion = TipoHabitacion::find($tipoHabitacionId);
+            $fi = Carbon::parse($fechaInicio);
+            $ff = Carbon::parse($fechaFin);
+            $numeroNoches = $fi->diffInDays($ff);
+            if ($numeroNoches <= 0) {
+                $numeroNoches = 1;
+            }
+
+            $subtotal = $tipoHabitacion->precio_noche * $numeroNoches;
+            $impuestos = $subtotal * 0.16;
+            $total = $subtotal + $impuestos;
+
+            // Crear reserva - PARA USO PÚBLICO dejamos id_usuario en null (o 1 si tu negocio lo requiere)
+            $reserva = Reserva::create([
+                'id_huesped' => $huesped->id_huesped,
+                'id_usuario' => Auth::id(), // <-- ajustar si deseas usar un usuario "sistema" (ej. 1)
+                'fecha_checkin' => $fi,
+                'fecha_checkout' => $ff,
+                'cantidad_personas' => $cantidadPersonas,
+                'estado' => 'confirmada', // o 'pendiente' según tu flujo
+                'subtotal' => $subtotal,
+                'impuestos' => $impuestos,
+                'total' => $total,
+                'observaciones' => 'Reserva creada desde sistema público'
+            ]);
+
+            // Crear detalle de reserva
+            DetalleReserva::create([
+                'id_reserva' => $reserva->id_reserva,
+                'id_habitacion' => $habitacionDisponible->id_habitacion,
+                'fecha_inicio' => $fi,
+                'fecha_fin' => $ff,
+                'precio_noche' => $tipoHabitacion->precio_noche,
+                // Nota: confirmar el nombre real de la columna en tu tabla (ver comentarios más abajo)
+                'numero_noches' => $numeroNoches,
+                'subtotal' => $subtotal
+            ]);
+
+            // Marcar la habitación como ocupada
+            $habitacionDisponible->update(['estado' => 'ocupada']);
+
+            // Respuesta
+            return response()->json([
+                'success' => true,
+                'message' => 'Reserva creada exitosamente',
+                'data' => [
+                    'id_reserva' => $reserva->id_reserva,
+                    'numero_reserva' => 'RES-' . str_pad($reserva->id_reserva, 6, '0', STR_PAD_LEFT),
+                    'fecha_inicio' => $fi->format('Y-m-d'),
+                    'fecha_fin' => $ff->format('Y-m-d'),
+                    'total' => $total,
+                    'habitacion' => $habitacionDisponible->numero_habitacion
+                ]
+            ], 201);
+        });
+
+    } catch (\Exception $e) {
+        Log::info('Auth debug', [
+    'auth_id' => Auth::id(),
+    'auth_user' => Auth::user(),      // ojo: en producción evita volcar objetos sensibles
+    'request_user' => $request->user(),
+    'auth_guards' => config('auth.guards'),
+    'authorization_header' => $request->header('Authorization'),
+]);
+
+        Log::info("id: ". Auth::user() . "\n\n\n\n");
+        // Log::error('crearPublico error: ' . $e->getMessage(), ['trace' => $e->getTraceAsString()]);
+
+        return response()->json([
+            'success' => false,
+            'message' => 'Error al crear reserva: ' . $e->getMessage()
+        ], 500);
+    }
+}
+
+
 }

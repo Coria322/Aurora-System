@@ -52,6 +52,11 @@ class Habitacion extends Model
         $query->where('estado', 'disponible');
     }
 
+    #[Scope] 
+    protected function Utilizables(Builder $query){
+        $query -> where('estado', '!=', 'no disponible');
+    }
+
 
     #[Scope]
     /**

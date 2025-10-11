@@ -22,6 +22,7 @@ const isOpen = computed({
   set: (value) => emit('update:open', value)
 })
 
+
 // Usar el composable
 const {
   isLoadingAvailability,
@@ -53,9 +54,11 @@ const {
 
 // Función para cerrar modal
 const closeModal = () => {
-  isOpen.value = false
-  resetForm()
+  resetForm()       // limpia el formulario
+  emit('update:open', false) // informa al padre que debe cerrar el modal
+  emit('close')     // opcional si quieres manejar el cierre de forma separada
 }
+
 
 // Función para manejar la creación de reserva
 const handleCrearReserva = async () => {
@@ -101,7 +104,7 @@ onMounted(() => {
       <!-- Notificación Toast -->
       <div 
         v-if="notification.show"
-        class="fixed top-4 right-4 z-50 p-4 rounded-lg shadow-lg transition-all duration-300"
+        class="sticky top-4 right-4 z-50 p-4 rounded-lg shadow-lg transition-all duration-300"
         :class="{
           'bg-green-500 text-white': notification.type === 'success',
           'bg-red-500 text-white': notification.type === 'error',

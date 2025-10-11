@@ -5,6 +5,7 @@ export function useReservationModal() {
   // Configuración de axios
   const api = axios.create({
     baseURL: '/api',
+    withCredentials: true,
     headers: {
       'Content-Type': 'application/json',
       'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]')?.getAttribute('content') || ''
@@ -157,29 +158,39 @@ export function useReservationModal() {
   }
 
   // API Calls
-  const cargarTiposHabitaciones = async () => {
-    try {
-      isLoadingRoomTypes.value = true
-      const response = await api.get('/habitaciones/tipos-publico')
-      
-      if (response.data.success) {
-        roomTypes.value = response.data.data.map((tipo: any) => ({
-          id: tipo.id_tipo_habitacion,
-          name: tipo.nombre,
-          description: tipo.descripcion,
-          price: tipo.precio_noche,
-          capacity: tipo.capacidad_maxima,
-          available_rooms: tipo.habitaciones_disponibles,
-          services: tipo.servicios_incluidos
-        }))
+// Ejemplo dentro de useReservation.ts
+const cargarTiposHabitaciones = async () => {
+  try {
+    isLoadingRoomTypes.value = true
+  
+    console.log("fechas", checkInDate.value," ",checkOutDate.value)
+    // Aquí pasamos las fechas al backend como query params
+    const response = await api.get('/habitaciones/tipos-publico', {
+      params: {
+        fecha_inicio: checkInDate.value || null,
+        fecha_fin: checkOutDate.value || null
       }
-    } catch (error) {
-      console.error('Error cargando tipos de habitaciones:', error)
-      showNotification('error', 'Error al cargar los tipos de habitaciones')
-    } finally {
-      isLoadingRoomTypes.value = false
+    })
+
+    if (response.data.success) {
+      
+      roomTypes.value = response.data.data.map((tipo: any) => ({
+        id: tipo.id_tipo_habitacion,
+        name: tipo.nombre,
+        description: tipo.descripcion,
+        price: tipo.precio_noche,
+        capacity: tipo.capacidad_maxima,
+        available_rooms: tipo.habitaciones_disponibles,
+        services: tipo.servicios_incluidos
+      }))
     }
+  } catch (error) {
+    console.error('Error cargando tipos de habitaciones:', error)
+    showNotification('error', 'Error al cargar los tipos de habitaciones')
+  } finally {
+    isLoadingRoomTypes.value = false
   }
+}
 
   const buscarDisponibilidad = async () => {
     if (!checkInDate.value || !checkOutDate.value) {
@@ -187,9 +198,11 @@ export function useReservationModal() {
       return
     }
 
-    const fechaInicio = new Date(formatDateForAPI(checkInDate.value))
-    const fechaFin = new Date(formatDateForAPI(checkOutDate.value))
-    
+    const fechaInicio = new Date(`${checkInDate.value}T00:00:00`)
+    const fechaFin = new Date(`${checkOutDate.value}T00:00:00`)
+
+    console.log("fechas", fechaInicio, " ", fechaFin)
+
     if (fechaFin <= fechaInicio) {
       showNotification('error', 'La fecha de salida debe ser posterior a la fecha de entrada')
       return
@@ -202,6 +215,7 @@ export function useReservationModal() {
         fecha_inicio: formatDateForAPI(checkInDate.value),
         fecha_fin: formatDateForAPI(checkOutDate.value)
       }
+      console.log(params)
 
       const response = await api.get('/disponibilidad-test', { params })
       
@@ -210,7 +224,6 @@ export function useReservationModal() {
         
         if (response.data.disponible) {
           showNotification('success', `¡Disponible! ${response.data.total_habitaciones_disponibles} habitaciones disponibles`)
-          
           roomTypes.value = roomTypes.value.map(room => {
             const tipoDisponible = response.data.tipos_disponibles.find(
               (tipo: any) => tipo.id_tipo_habitacion === room.id
@@ -246,6 +259,12 @@ export function useReservationModal() {
     try {
       isLoadingReservation.value = true
       
+      console.log(
+        "fechas al reservar =",
+        formatDateForAPI(checkInDate.value),
+        formatDateForAPI(checkOutDate.value)
+      )
+
       const reservationData = {
         fecha_inicio: formatDateForAPI(checkInDate.value),
         fecha_fin: formatDateForAPI(checkOutDate.value),
@@ -256,8 +275,15 @@ export function useReservationModal() {
         telefono: huespedData.value.telefono || null
       }
 
+      console.log("datos de reserva",
+        reservationData
+      )
+
       const response = await api.post('/reservas/crear-publico', reservationData)
-      
+      console.log(
+        "respuesta de crear reserva",
+        response
+      )
       if (response.data.success) {
         return response.data.data
       }

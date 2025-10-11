@@ -426,11 +426,25 @@ public function crearPublico(Request $request): JsonResponse
         $fechaFin = $validated['fecha_fin'];
         $tipoHabitacionId = $validated['tipo_habitacion_id'];
         $cantidadPersonas = $validated['cantidad_personas'] ?? 1;
-        $nombre = $validated['nombre'] ?? 'Cliente';
-        $email = $validated['email'] ?? 'cliente@test.com';
+        $nombre = $validated['nombre'];
+        $email = $validated['email'];
 
         // Usar transacción para evitar race conditions al reservar la habitación
-        return DB::transaction(function() use ($fechaInicio, $fechaFin, $tipoHabitacionId, $cantidadPersonas, $nombre, $email) {
+        return DB::transaction(function() use ($request, $fechaInicio, 
+                                                        $fechaFin, $tipoHabitacionId, 
+                                                        $cantidadPersonas) {
+
+            $validated = $request -> validate([
+            'fecha_inicio' => 'required|date|after_or_equal:today',
+            'fecha_fin' => 'required|date|after:fecha_inicio',
+            'tipo_habitacion_id' => 'required|exists:tipo_habitaciones,id_tipo_habitacion',
+            'cantidad_personas' => 'nullable|integer|min:1|max:10',
+            'nombre' => 'string|max:50',
+            'apellido_paterno' => 'string|max:50',
+            'apellido_materno' => 'nullable|string|max:50',
+            'telefono' => 'nullable|numeric|max:10',
+            'email' => 'email|max:100',
+            ]);
 
             // Buscar habitación disponible usando los scopes que ya usas en el proyecto
             $habitacionDisponible = Habitacion::Utilizables()
@@ -448,17 +462,17 @@ public function crearPublico(Request $request): JsonResponse
 
             // Crear o reutilizar huésped por email (evita duplicados)
             $huesped = Huesped::firstOrCreate(
-                ['email' => $email],
+                ['email' => $validated['email']],
                 [
-                    'nombre' => $nombre,
-                    'apellido_paterno' => 'Temporal',
-                    'apellido_materno' => 'Temporal',
-                    'telefono' => '0000000000',
+                    'nombre' => $validated['nombre'],
+                    'apellido_paterno' => $validated['apellido_paterno'],
+                    'apellido_materno' => $validated['apellido_materno'] ?? null,
+                    'telefono' => $validated['telefono'] ?? null,
                     'tipo_documento' => 'INE',
-                    'documento_identidad' => '0000000000',
+                    'documento_identidad' => 'Pendiente',
                     'fecha_nacimiento' => null,
-                    'direccion' => 'Dirección temporal',
-                    'ciudad' => 'Ciudad temporal',
+                    'direccion' => 'Pendiente',
+                    'ciudad' => 'Pendiente',
                     'pais' => 'México'
                 ]
             );

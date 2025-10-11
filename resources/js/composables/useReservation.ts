@@ -271,6 +271,8 @@ const cargarTiposHabitaciones = async () => {
         tipo_habitacion_id: parseInt(selectedRoomType.value),
         cantidad_personas: cantidadPersonas.value,
         nombre: huespedData.value.nombre,
+        apellido_paterno: huespedData.value.apellido_paterno,
+        apellido_materno: huespedData.value.apellido_materno,
         email: huespedData.value.email,
         telefono: huespedData.value.telefono || null
       }

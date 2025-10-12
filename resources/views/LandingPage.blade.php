@@ -6,7 +6,10 @@
     <title>{{ config("app.name") }}</title>
     @vite(['resources/css/app.css', 'resources/js/app.js'])
 </head>
-<body>
+<header>
     @include('partials.navbar')
+</header>
+<body>
+    @include('partials.vidBanner')
 </body>
 </html>

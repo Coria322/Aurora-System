@@ -2,6 +2,8 @@
 
 namespace App\Models;
 
+use Illuminate\Database\Eloquent\Attributes\Scope;
+use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 
@@ -12,7 +14,7 @@ class huesped extends Model
     protected $table = 'huespedes';
     protected $primaryKey = 'id_huesped';
 
-    public $timestamps = false;
+    public $timestamps = true;
     
     protected $fillable = [
         'nombre',
@@ -50,5 +52,21 @@ class huesped extends Model
             'id_huesped',     // PK local en Huesped
             'id_reserva'      // PK local en Reserva
         );
+    }
+
+    /**
+     * Scopes locales
+     */
+
+    #[Scope]
+    /**
+     * Scope que retorna los usuarios con reservas activas
+     * @param \Illuminate\Database\Eloquent\Builder $query
+     * @return void
+     */
+    protected function conReservasActivas(Builder $query){
+        $query -> whereHas('reservas', function($sq){
+            $sq -> where('estado', 'confirmada');
+        });
     }
 }

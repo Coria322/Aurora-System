@@ -1,5 +1,5 @@
 @import url('https://fonts.googleapis.com/css2?family=EB+Garamond:ital,wght@0,400..800;1,400..800&family=Rubik:ital,wght@0,300..900;1,300..900&display=swap');
-
+@import './landingbanner.css';
 /*
     Variables globales
 */
@@ -33,7 +33,7 @@
     align-items: center;
     height: 80px;
     width: 100%;
-    background-color: var(--color-primary);
+    background-color: var(--color-secondary);
     padding: 2%;
 }
 

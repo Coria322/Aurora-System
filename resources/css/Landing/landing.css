@@ -1,5 +1,6 @@
 @import url('https://fonts.googleapis.com/css2?family=EB+Garamond:ital,wght@0,400..800;1,400..800&family=Rubik:ital,wght@0,300..900;1,300..900&display=swap');
 @import './landingbanner.css';
+
 /*
     Variables globales
 */
@@ -13,10 +14,12 @@
     --color-of-sand: #fdf5AA;
     --color-bg: #fafafa;
     --color-error: #d32f2f;
-    
+
     /* FUENTES */
-    --font-title: 'EB Garamond', serif; /* Se agrega 'serif' como fallback */
-    --font-text: 'Rubik', sans-serif;   /* Se agrega 'sans-serif' como fallback */
+    --font-title: 'EB Garamond', serif;
+    /* Se agrega 'serif' como fallback */
+    --font-text: 'Rubik', sans-serif;
+    /* Se agrega 'sans-serif' como fallback */
 
     /* TAMAÑOS */
     --small: 15px;
@@ -25,6 +28,9 @@
     --title: 30px;
 }
 
+body {
+    background-color: var(--color-secondary-var);
+}
 
 /* --- Estilos de la Barra de Navegación --- */
 .navbar {
@@ -33,7 +39,7 @@
     align-items: center;
     height: 80px;
     width: 100%;
-    background-color: var(--color-secondary);
+    background-color: var(--color-primary);
     padding: 2%;
 }
 
@@ -77,24 +83,56 @@
 .navbar__links {
     list-style: none;
     display: flex;
-    gap: 2rem; /* Espacio entre los enlaces */
+    gap: 2rem;
+    /* Espacio entre los enlaces */
     margin-right: 2rem;
 }
 
+/* --- Hover y Active para navbar__link --- */
 .navbar__link {
     color: var(--color-on-primary);
     text-decoration: none;
     font-size: var(--small);
     padding: 5px 0;
     position: relative;
-    transition: transform 0.3s ease;
+    display: inline-block;
+    /* 🔥 necesario para que el transform se note */
+    transition: transform 0.2s ease, color 0.3s ease;
 }
 
-.navbar__link::after{
-
+/* Línea blanca que aparece al hacer hover */
+.navbar__link::after {
+    content: "";
+    position: absolute;
+    left: 0;
+    bottom: -2px;
+    /* un poquito más abajo para no pegarse al texto */
+    width: 0%;
+    height: 2px;
+    background-color: var(--color-on-primary);
+    transition: width 0.3s ease;
 }
 
-/* Botón de Reservar */
+/* Efecto hover: se eleva y se subraya */
+.navbar__link:hover {
+    transform: translateY(-3px);
+    /* 🔼 se levanta */
+}
+
+.navbar__link:hover::after {
+    width: 100%;
+    /* la línea aparece de izquierda a derecha */
+}
+
+/* Efecto active: se presiona hacia abajo */
+.navbar__link:active {
+    transform: translateY(1px);
+    /* 🔽 simula la presión */
+}
+
+
+
+/* --- Botón de Reservar con animación de color --- */
 .navbar__reserve-btn {
     background-color: var(--color-on-primary);
     color: var(--color-primary);
@@ -102,12 +140,28 @@
     padding: 10px 20px;
     border-radius: 20px;
     text-decoration: none;
-    transition: background-color 0.3s, color 0.3s;
     font-size: var(--small);
+    transition:
+        background-color 0.4s ease,
+        color 0.4s ease,
+        transform 0.2s ease,
+        box-shadow 0.3s ease;
 }
 
+/* Hover: cambia color suavemente y se levanta un poco */
 .navbar__reserve-btn:hover {
-    background-color: #f0f0f0;
+    background-color: var(--color-secondary-var);
+    /* cambia al azul claro */
+    color: var(--color-on-primary);
+    transform: translateY(-3px);
+    box-shadow: 0 4px 10px rgba(0, 0, 0, 0.2);
+    /* efecto de elevación */
+}
+
+/* Active: simula presión */
+.navbar__reserve-btn:active {
+    transform: translateY(1px);
+    box-shadow: 0 2px 5px rgba(0, 0, 0, 0.15);
 }
 
 /* Botón de Hamburguesa (inicialmente oculto) */
@@ -134,13 +188,16 @@
 /* --- Diseño Responsivo (para pantallas de 768px o menos) --- */
 @media (max-width: 768px) {
     .navbar__toggle {
-        display: block; /* Muestra el botón de hamburguesa */
+        display: block;
+        /* Muestra el botón de hamburguesa */
     }
 
     .navbar__menu {
-        display: none; /* Oculta el menú por defecto */
+        display: none;
+        /* Oculta el menú por defecto */
         position: absolute;
-        top: 80px; /* Justo debajo del navbar */
+        top: 80px;
+        /* Justo debajo del navbar */
         left: 0;
         width: 100%;
         background-color: var(--color-primary);
@@ -157,7 +214,8 @@
     .navbar__links {
         flex-direction: column;
         gap: 1.5rem;
-        margin: 0 0 1.5rem 0; /* Quita el margen derecho y añade uno inferior */
+        margin: 0 0 1.5rem 0;
+        /* Quita el margen derecho y añade uno inferior */
         text-align: center;
     }
 
@@ -165,9 +223,11 @@
     .navbar__toggle.is-active .navbar__toggle-bar:nth-child(1) {
         transform: translateY(8px) rotate(45deg);
     }
+
     .navbar__toggle.is-active .navbar__toggle-bar:nth-child(2) {
         opacity: 0;
     }
+
     .navbar__toggle.is-active .navbar__toggle-bar:nth-child(3) {
         transform: translateY(-8px) rotate(-45deg);
     }

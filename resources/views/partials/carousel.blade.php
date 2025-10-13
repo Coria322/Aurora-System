@@ -5,7 +5,7 @@
         @forelse ($tipoHab as $tipo)
             <div class="habitacion__card">
                 @if ($tipo->imagen)
-                    <img class="habitacion__imagen" src="{{ asset('images/' . $tipo->imagen) }}" alt="Imagen de {{ $tipo->nombre }}">
+                    <img class="habitacion__imagen" src="{{ asset($tipo->imagen) }}" alt="Imagen de {{ $tipo->nombre }}">
                 @else
                     <img class="habitacion__imagen" src="{{ asset('images/Habitaciones/habitacion_generica.png') }}" alt="Imagen por defecto">
                 @endif

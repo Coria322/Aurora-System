@@ -1,4 +1,4 @@
-/* Elementos del carrusel de habitaciones */
+/* Elementos del carrusel de servicioes */
 .carousel-container.full-width {
     position: relative;
     width: 100%;  /* ocupa todo el ancho */
@@ -13,11 +13,12 @@
     scroll-behavior: smooth;
 }
 
-.habitacion__card {
+.servicio__card {
     flex: 0 0 30%; /* 3 cards visibles aprox */
     max-width: 300px;
     min-width: 250px;
     border-radius: 10px;
+    padding: 20px;
     box-shadow: 0 4px 10px rgba(0,0,0,0.1);
     overflow: hidden;
     background-color: #fff;
@@ -25,13 +26,14 @@
     flex-direction: column;
 }
 
-.habitacion__imagen {
+.servicio__imagen {
     width: 100%;
-    height: 200px;
-    object-fit: cover;
+    height: 50px;
+    margin: 5% 0 2% 0;
+    object-fit: contain;
 }
 
-.habitacion__contenido {
+.servicio__contenido {
     padding: 15px;
     text-align: center;
     display: flex;
@@ -40,7 +42,7 @@
     flex-grow: 1;
 }
 
-.habitacion__titulo {
+.servicio__titulo {
     font-family: var(--font-title);
     color: var(--color-primary);
     font-size: 1.2rem;
@@ -48,7 +50,7 @@
     font-weight: 600;
 }
 
-.habitacion__descripcion {
+.servicio__descripcion {
     font-family: 'Rubik', sans-serif;
     font-weight: 300;
     color: #000;
@@ -56,7 +58,7 @@
     margin-bottom: 10px;
 }
 
-.habitacion__boton {
+.servicio__boton {
     display: inline-block;
     padding: 8px 16px;
     background-color: var(--color-secondary);
@@ -68,7 +70,7 @@
     transition: opacity 0.2s;
 }
 
-.habitacion__boton:hover {
+.servicio__boton:hover {
     opacity: 0.9;
 }
 
@@ -98,9 +100,9 @@
 
 /* Responsive */
 @media (max-width: 1024px) {
-    .habitacion__card { flex: 0 0 45%; } /* 2 cards en tablet */
+    .servicio__card { flex: 0 0 45%; } /* 2 cards en tablet */
 }
 
 @media (max-width: 640px) {
-    .habitacion__card { flex: 0 0 80%; } /* 1 card en móvil */
+    .servicio__card { flex: 0 0 80%; } /* 1 card en móvil */
 }

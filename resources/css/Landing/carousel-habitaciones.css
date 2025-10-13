@@ -94,3 +94,13 @@
 
 .carousel-btn.prev { left: 10px; }
 .carousel-btn.next { right: 10px; }
+
+
+/* Responsive */
+@media (max-width: 1024px) {
+    .habitacion__card { flex: 0 0 45%; } /* 2 cards en tablet */
+}
+
+@media (max-width: 640px) {
+    .habitacion__card { flex: 0 0 80%; } /* 1 card en móvil */
+}

@@ -20,9 +20,9 @@ class Seeder_general extends Seeder
 {
     public function run(): void
     {
-
         try {
             DB::beginTransaction();
+
             // -----------------------------
             // 1️⃣ Usuarios
             // -----------------------------
@@ -53,9 +53,71 @@ class Seeder_general extends Seeder
             // -----------------------------
             // 3️⃣ TipoHabitacion y Habitaciones
             // -----------------------------
-            $tipos = TipoHabitacion::factory()->count(5)->create();
-            $this->command->info("✅ 5 Tipos de habitación creados");
+            $this->command->info("Creando tipos de habitación...");
 
+            // Limpiamos la tabla para evitar duplicados
+
+            $tiposHabitaciones = [
+                [
+                    'nombre' => 'Aurora Essential',
+                    'descripcion' => 'Espacio moderno y acogedor con diseño minimalista. Ideal para estancias cortas o escapadas de fin de semana.',
+                    'capacidad_maxima' => 2,
+                    'precio_noche' => 700,
+                    'servicios_incluidos' => 'Cama Queen, Ducha tipo lluvia, Wi-Fi, Smart TV, Iluminación ambiental',
+                ],
+                [
+                    'nombre' => 'Aurora Balance',
+                    'descripcion' => 'Habitación amplia con tonos cálidos y mobiliario de diseño escandinavo.',
+                    'capacidad_maxima' => 2,
+                    'precio_noche' => 1200,
+                    'servicios_incluidos' => 'Cama King o 2 Twin, Espacio de trabajo, Minibar artesanal, Vista parcial',
+                ],
+                [
+                    'nombre' => 'Aurora Flow',
+                    'descripcion' => 'Habitación superior con área de estar integrada, perfecta para desconectar o trabajar cómodamente.',
+                    'capacidad_maxima' => 3,
+                    'precio_noche' => 1800,
+                    'servicios_incluidos' => 'Cama King, Zona lounge, Cafetera premium, Ducha tipo cascada o tina',
+                ],
+                [
+                    'nombre' => 'Aurora Tribe',
+                    'descripcion' => 'Habitación familiar o grupal con diseño cálido, espacios conectados y tecnología domótica.',
+                    'capacidad_maxima' => 4,
+                    'precio_noche' => 2500,
+                    'servicios_incluidos' => '2 camas Queen + sofá cama, Baño amplio, Área social, Smart TV 65"',
+                ],
+                [
+                    'nombre' => 'Aurora Suite',
+                    'descripcion' => 'Suite amplia con áreas separadas para descanso y relajación.',
+                    'capacidad_maxima' => 3,
+                    'precio_noche' => 3200,
+                    'servicios_incluidos' => 'Dormitorio principal, Sala lounge, Tina de hidromasaje, Balcón privado',
+                ],
+                [
+                    'nombre' => 'Aurora Executive',
+                    'descripcion' => 'Suite ejecutiva moderna con espacio para reuniones, descanso y trabajo.',
+                    'capacidad_maxima' => 2,
+                    'precio_noche' => 4500,
+                    'servicios_incluidos' => 'Dormitorio + sala de estar, Escritorio, Ducha y tina independientes, Lounge privado',
+                ],
+                [
+                    'nombre' => 'Aurora Zenith',
+                    'descripcion' => 'Suite presidencial diseñada para experiencias únicas, con interiores inspirados en el cielo nocturno.',
+                    'capacidad_maxima' => 2,
+                    'precio_noche' => 8000,
+                    'servicios_incluidos' => 'Sala, Comedor, Dormitorio principal, Jacuzzi panorámico, Mayordomo y chef personal',
+                ],
+            ];
+
+            $tipos = collect();
+            foreach ($tiposHabitaciones as $t) {
+                $imagen = 'images/habitaciones/' . strtolower(str_replace(' ', '_', $t['nombre'])) . '.png';
+                $tipos->push(TipoHabitacion::create(array_merge($t, ['imagen' => $imagen, 'activo' => 1])));
+            }
+
+            $this->command->info("✅ 7 Tipos de habitación creados con sus imágenes");
+
+            // Creamos entre 3 y 5 habitaciones físicas por cada tipo
             $habitaciones = collect();
             foreach ($tipos as $tipo) {
                 $habitaciones = $habitaciones->merge(Habitacion::factory()->count(rand(3,5))->create([
@@ -111,6 +173,7 @@ class Seeder_general extends Seeder
                     ]);
                 }
             }
+
             DB::commit();
             $this->command->info("🎉 Seeder completo ejecutado correctamente");
 

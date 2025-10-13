@@ -25,6 +25,7 @@ class TipoHabitacion extends Model
         'precio_noche',
         'servicios_incluidos',
         'activo',
+        'imagen'
     ];
 
     protected $casts = [

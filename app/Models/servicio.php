@@ -22,6 +22,7 @@ class servicio extends Model
         'precio',
         'tipo_servicio',
         'activo',
+        'imagen'
     ];
 
     protected $casts = [

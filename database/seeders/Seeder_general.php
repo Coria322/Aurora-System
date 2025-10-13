@@ -107,6 +107,20 @@ class Seeder_general extends Seeder
                     'precio_noche' => 8000,
                     'servicios_incluidos' => 'Sala, Comedor, Dormitorio principal, Jacuzzi panorámico, Mayordomo y chef personal',
                 ],
+                [
+                    'nombre' => 'Aurora Sky Villa',
+                    'descripcion' => 'Ofrece una experiencia sensorial completa con amplios ventanales panorámicos, piscina infinita privada y una estética moderna que combina mármol, madera clara y luz natural.',
+                    'capacidad_maxima' => 3,
+                    'precio_noche' => 15000,
+                    'servicios_incluidos' => '1 dormitorio principal con cama King Signature, Piscina infinita privada, Terraza panorámica, Ducha tipo lluvia + bañera, Sala de estar y cocina gourmet, Servicio de mayordomo y chef a solicitud',
+                ],
+                [
+                    'nombre' => 'Aurora Terra Villa',
+                    'descripcion' => 'Una experiencia de calma absoluta con techos altos, piedra natural, madera local y vegetación integrada para la serenidad y el bienestar.',
+                    'capacidad_maxima' => 4,
+                    'precio_noche' => 12000,
+                    'servicios_incluidos' => '2 dormitorios con camas King Premium, Jardín interior con jacuzzi al aire libre, Ducha al exterior rodeada de bambú, Zona lounge con fogata privada, Cocina equipada y comedor interior/exterior, Asistente personal y spa a solicitud',
+                ],
             ];
 
             $tipos = collect();
@@ -120,7 +134,7 @@ class Seeder_general extends Seeder
             // Creamos entre 3 y 5 habitaciones físicas por cada tipo
             $habitaciones = collect();
             foreach ($tipos as $tipo) {
-                $habitaciones = $habitaciones->merge(Habitacion::factory()->count(rand(3,5))->create([
+                $habitaciones = $habitaciones->merge(Habitacion::factory()->count(rand(3, 5))->create([
                     'id_tipo_habitacion' => $tipo->id_tipo_habitacion
                 ]));
             }
@@ -136,11 +150,11 @@ class Seeder_general extends Seeder
             // 5️⃣ Reservas y relaciones
             // -----------------------------
             foreach ($habitaciones as $habitacion) {
-                $cantidad_reservas = rand(1,3);
+                $cantidad_reservas = rand(1, 3);
 
-                for ($i=0; $i < $cantidad_reservas; $i++) {
+                for ($i = 0; $i < $cantidad_reservas; $i++) {
                     $huesped = Huesped::inRandomOrder()->first();
-                    $usuario = User::whereIn('tipo_usuario', ['admin','empleado'])->inRandomOrder()->first();
+                    $usuario = User::whereIn('tipo_usuario', ['admin', 'empleado'])->inRandomOrder()->first();
 
                     $reserva = Reserva::factory()->create([
                         'id_huesped' => $huesped->id_huesped,
@@ -156,7 +170,7 @@ class Seeder_general extends Seeder
                         'id_reserva' => $reserva->id_reserva,
                     ]);
 
-                    $cantidad_servicios = rand(0,3);
+                    $cantidad_servicios = rand(0, 3);
                     if ($cantidad_servicios > 0) {
                         $serviciosSeleccionados = $servicios->random($cantidad_servicios);
                         foreach ($serviciosSeleccionados as $servicio) {
@@ -176,7 +190,6 @@ class Seeder_general extends Seeder
 
             DB::commit();
             $this->command->info("🎉 Seeder completo ejecutado correctamente");
-
         } catch (Exception $e) {
             DB::rollBack();
             $this->command->error("❌ Error al ejecutar el seeder: " . $e->getMessage() . " stack trace " . $e->getTraceAsString());

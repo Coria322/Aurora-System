@@ -4,7 +4,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>{{ config("app.name") }}</title>
-    @vite(['resources/css/app.css', 'resources/js/app.js', 'resources/js/carousel-habitacion.js'])
+    @vite(['resources/css/app.css', 'resources/js/app.js', 'resources/js/carousel.js'])
 </head>
 <header>
     @include('partials.navbar')
@@ -14,10 +14,16 @@
         @include('partials.vidBanner')
     </section>
     <section id="habitaciones">
-        <h1 class="habitaciones__title">
+        <h1 class="landing__title">
             Vive el lujo de Hospedarte con Nosotros.
         </h1>
         @include('partials.carousel')
+    </section>
+    <section id="servicios">
+        <h1 class="landing__title">
+            Disfruta con Nuestros Exclusivos Servicios
+        </h1>
+        @include('partials.carousel-servicios')
     </section>
     
 </body>

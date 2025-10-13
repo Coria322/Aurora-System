@@ -8,8 +8,8 @@ use Illuminate\Http\Request;
 class landingController extends Controller
 {
     public function showHome(){
-        $tipoHab = TipoHabitacion::listar()->get();
+        $tipoHab = TipoHabitacion::activas()->get();
 
-        return view('LandingPage');
+        return view('LandingPage', compact('tipoHab'));
     }
 }

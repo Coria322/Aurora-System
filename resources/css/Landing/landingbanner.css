@@ -4,6 +4,7 @@
     height: 350px;
     /* o el alto que prefieras */
     overflow: hidden;
+    margin-top: 5.4%;
 }
 
 .banner-video video {

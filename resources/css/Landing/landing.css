@@ -1,5 +1,6 @@
 @import url('https://fonts.googleapis.com/css2?family=EB+Garamond:ital,wght@0,400..800;1,400..800&family=Rubik:ital,wght@0,300..900;1,300..900&display=swap');
 @import './landingbanner.css';
+@import './carousel-habitaciones.css';
 
 /*
     Variables globales
@@ -41,7 +42,13 @@ body {
     width: 100%;
     background-color: var(--color-primary);
     padding: 2%;
+
+    position: fixed;  /* navbar fijo */
+    top: 0;           /* siempre arriba */
+    left: 0;
+    z-index: 1000;    /* encima de todo */
 }
+
 
 .navbar__brand {
     display: flex;
@@ -183,6 +190,33 @@ body {
 
 /* Animaciones */
 
+
+/*---------- SECCION HABITACIONES -----------------*/
+.habitaciones__title {
+    text-align:left;            /* centra el texto horizontalmente */
+    font-family: var(--font-title);
+    font-size: 2rem;
+    color: white;                  /* texto blanco */
+    background-color: var(--color-primary);        /* color de la barra */
+    display: inline-block;         /* para que la barra tenga el tamaño del texto */
+    padding: 3px 30px;            /* espacio arriba/abajo y lados */
+    border-radius: 5px;            /* opcional: bordes redondeados */
+    margin: 20px 0;                /* espacio arriba y abajo del título */
+    width: 100%;
+}
+
+#habitaciones{
+    padding: 2%;
+}
+
+/* Responsive */
+@media (max-width: 1024px) {
+    .habitacion__card { flex: 0 0 45%; } /* 2 cards en tablet */
+}
+
+@media (max-width: 640px) {
+    .habitacion__card { flex: 0 0 80%; } /* 1 card en móvil */
+}
 
 
 /* --- Diseño Responsivo (para pantallas de 768px o menos) --- */

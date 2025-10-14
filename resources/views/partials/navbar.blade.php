@@ -22,6 +22,6 @@
             <li><a href="#servicios" class="navbar__link">Servicios</a></li>
             <li><a href="#contacto" class="navbar__link">Contacto</a></li>
         </ul>
-        <a href="#reservar" class="navbar__reserve-btn">Reservar Ahora</a>
+        <a href="{{ route('login') }}" class="navbar__reserve-btn">Reservar Ahora</a>
     </div>
 </nav>

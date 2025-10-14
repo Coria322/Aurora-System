@@ -24,7 +24,9 @@
             Disfruta con Nuestros Exclusivos Servicios
         </h1>
         @include('partials.carousel-servicios')
-    </section>
-    
+    </section>    
 </body>
+<footer id="contacto" class="bg-gray-900 text-gray-300 py-10" style="--color-of-sand: #fdf5AA;">
+    @include('partials.footer')
+</footer>
 </html>

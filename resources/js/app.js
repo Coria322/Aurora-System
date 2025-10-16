@@ -1,4 +1,5 @@
 import '../js/bannervid';
+import '../js/carousel'
 
 document.addEventListener('DOMContentLoaded', function () {
     const navbarToggle = document.getElementById('navbarToggle');

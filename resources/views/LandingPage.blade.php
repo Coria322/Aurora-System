@@ -4,7 +4,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>{{ config("app.name") }}</title>
-    @vite(['resources/css/app.css', 'resources/js/app.js', 'resources/js/carousel.js'])
+    @vite(['resources/css/app.css', 'resources/js/app.js'])
 </head>
 <header>
     @include('partials.navbar')
@@ -24,7 +24,7 @@
             Disfruta con Nuestros Exclusivos Servicios
         </h1>
         @include('partials.carousel-servicios')
-    </section>    
+    </section>
 </body>
 <footer id="contacto" class="bg-gray-900 text-gray-300 py-10" style="--color-of-sand: #fdf5AA;">
     @include('partials.footer')

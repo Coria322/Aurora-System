@@ -9,7 +9,7 @@ export default defineConfig({
         laravel({
             input: [
                 'resources/js/app.ts',           // tu app global
-                'resources/js/HabitacionesApp.ts' // tu app de habitaciones
+                'resources/js/HabitacionesApp.ts'
             ],
             ssr: 'resources/js/ssr.ts',
             refresh: true,

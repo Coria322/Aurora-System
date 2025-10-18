@@ -18,34 +18,7 @@ if (rootElement && !rootElement.dataset.vueMounted) {
         setup() {
             return useHabitaciones(habitacionesData)
         },
-        template: `
-<div class="carousel-container full-width">
-    <button class="carousel-btn prev" @click="prevSlide">&#10094;</button>
-
-    <div class="carousel">
-        <div v-for="habitacion in habitaciones" :key="habitacion.id" class="habitacion__card">
-            <img 
-                class="habitacion__imagen"
-                :src="habitacion.imagen || '/images/Habitaciones/habitacion_generica.png'"
-                :alt="habitacion.nombre"
-            >
-            <div class="habitacion__contenido">
-                <h3 class="habitacion__titulo">{{ habitacion.nombre }}</h3>
-                <p class="habitacion__descripcion">{{ habitacion.descripcion }}</p>
-                <button @click="openModal(habitacion)" class="habitacion__boton">Ver Detalles</button>
-            </div>
-        </div>
-    </div>
-
-    <button class="carousel-btn next" @click="nextSlide">&#10095;</button>
-
-    <HabitacionModal 
-        v-if="showModal" 
-        :habitacion="selectedHabitacion" 
-        @close="closeModal" 
-    />
-</div>
-`
+       
 
     })
 

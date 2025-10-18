@@ -13,12 +13,30 @@
                         <h2 class="modal-titulo">{{ habitacion.nombre }}</h2>
                         <p class="modal-descripcion">{{ habitacion.descripcion }}</p>
 
-                        <div class="modal-detalles" v-if="habitacion.capacidad || habitacion.precio">
-                            <div v-if="habitacion.capacidad" class="detalle-item">
-                                <strong>Capacidad:</strong> {{ habitacion.capacidad }} personas
+                        <!-- Detalles principales -->
+                        <div class="modal-detalles" v-if="habitacion.capacidad_maxima || habitacion.precio_noche || habitacion.servicios_incluidos">
+                            <div v-if="habitacion.capacidad_maxima" class="detalle-item">
+                                <strong>Capacidad:</strong> {{ habitacion.capacidad_maxima }} personas
                             </div>
-                            <div v-if="habitacion.precio" class="detalle-item">
-                                <strong>Precio:</strong> ${{ habitacion.precio }}
+
+                            <div v-if="habitacion.precio_noche" class="detalle-item">
+                                <strong>Precio por noche:</strong> ${{ habitacion.precio_noche }}
+                            </div>
+
+                            <div v-if="habitacion.servicios_incluidos" class="detalle-item">
+                                <strong>Servicios incluidos:</strong>
+                                <ul class="servicios-lista">
+                                    <li v-for="(servicio, index) in serviciosSeparados" :key="index">
+                                        {{ servicio }}
+                                    </li>
+                                </ul>
+                            </div>
+
+                            <div v-if="habitacion.activo !== undefined" class="detalle-item">
+                                <strong>Disponibilidad:</strong>
+                                <span :class="habitacion.activo ? 'activo' : 'inactivo'">
+                                    {{ habitacion.activo ? 'Disponible' : 'No disponible' }}
+                                </span>
                             </div>
                         </div>
                     </div>
@@ -29,18 +47,32 @@
 </template>
 
 <script setup lang="ts">
+import { computed } from 'vue'
+
 export interface Habitacion {
-    id: number
+    id_tipo_habitacion: number
     nombre: string
     descripcion: string
     imagen: string
-    capacidad?: number
-    precio?: number
+    capacidad_maxima?: number
+    precio_noche?: number | string
+    servicios_incluidos?: string
+    activo?: boolean
 }
 
-defineProps<{
+const props = defineProps<{
     habitacion: Habitacion
 }>()
+
+// Convierte la lista de servicios en array limpio
+const serviciosSeparados = computed(() => {
+    if (!props.habitacion.servicios_incluidos) return []
+    return props.habitacion.servicios_incluidos
+        .split(',')
+        .map(s => s.trim())
+        .filter(s => s.length > 0)
+})
+
 </script>
 
 <style scoped>
@@ -147,6 +179,27 @@ defineProps<{
 
 .detalle-item strong {
     color: #000;
+}
+
+.servicios-lista {
+    margin-top: 10px;
+    padding-left: 20px;
+}
+
+.servicios-lista li {
+    list-style-type: disc;
+    margin-bottom: 6px;
+    color: #555;
+}
+
+.activo {
+    color: green;
+    font-weight: bold;
+}
+
+.inactivo {
+    color: red;
+    font-weight: bold;
 }
 
 /* Animación del Modal */

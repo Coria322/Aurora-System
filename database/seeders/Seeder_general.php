@@ -139,12 +139,90 @@ class Seeder_general extends Seeder
                 ]));
             }
             $this->command->info("✅ Habitaciones creadas para cada tipo");
-
             // -----------------------------
             // 4️⃣ Servicios
             // -----------------------------
-            $servicios = servicio::factory()->count(10)->create();
-            $this->command->info("✅ 10 Servicios adicionales creados");
+            $this->command->info("Creando servicios adicionales...");
+
+            $serviciosData = [
+                [
+                    'nombre_servicio' => 'Servicio a la habitación',
+                    'descripcion' => 'Disfruta tus alimentos sin salir de la habitación. Disponible las 24 horas con menú completo.',
+                    'precio' => 120,
+                    'tipo_servicio' => 'basico',
+                    'activo' => true,
+                ],
+                [
+                    'nombre_servicio' => 'Spa relajante',
+                    'descripcion' => 'Masajes, aromaterapia y tratamientos de relajación en un ambiente zen.',
+                    'precio' => 450,
+                    'tipo_servicio' => 'premium',
+                    'activo' => true,
+                ],
+                [
+                    'nombre_servicio' => 'Cena romántica',
+                    'descripcion' => 'Cena privada para dos, con decoración especial, música y menú gourmet.',
+                    'precio' => 700,
+                    'tipo_servicio' => 'premium',
+                    'activo' => true,
+                ],
+                [
+                    'nombre_servicio' => 'Lavandería express',
+                    'descripcion' => 'Servicio de lavado, planchado y entrega en menos de 12 horas.',
+                    'precio' => 180,
+                    'tipo_servicio' => 'basico',
+                    'activo' => true,
+                ],
+                [
+                    'nombre_servicio' => 'Transporte al aeropuerto',
+                    'descripcion' => 'Traslado cómodo y seguro al aeropuerto, disponible las 24 horas.',
+                    'precio' => 250,
+                    'tipo_servicio' => 'premium',
+                    'activo' => true,
+                ],
+                [
+                    'nombre_servicio' => 'Clases de yoga al amanecer',
+                    'descripcion' => 'Sesiones guiadas en la terraza con vista al amanecer, perfectas para comenzar el día con energía.',
+                    'precio' => 150,
+                    'tipo_servicio' => 'basico',
+                    'activo' => true,
+                ],
+                [
+                    'nombre_servicio' => 'Tour local guiado',
+                    'descripcion' => 'Recorrido cultural por los principales atractivos de la ciudad, con guía certificado.',
+                    'precio' => 350,
+                    'tipo_servicio' => 'premium',
+                    'activo' => true,
+                ],
+                [
+                    'nombre_servicio' => 'Cuidado infantil',
+                    'descripcion' => 'Niñeras capacitadas disponibles por hora, con actividades recreativas y supervisión constante.',
+                    'precio' => 200,
+                    'tipo_servicio' => 'basico',
+                    'activo' => true,
+                ],
+                [
+                    'nombre_servicio' => 'Aromaterapia nocturna',
+                    'descripcion' => 'Ambientación de la habitación con esencias relajantes y música suave antes de dormir.',
+                    'precio' => 100,
+                    'tipo_servicio' => 'basico',
+                    'activo' => true,
+                ],
+                [
+                    'nombre_servicio' => 'Desayuno en la terraza',
+                    'descripcion' => 'Desayuno continental o gourmet servido con vista panorámica al amanecer.',
+                    'precio' => 180,
+                    'tipo_servicio' => 'premium',
+                    'activo' => true,
+                ],
+            ];
+
+            $servicios = collect();
+            foreach ($serviciosData as $s) {
+                $servicios->push(servicio::create($s));
+            }
+
+            $this->command->info("✅ 10 Servicios adicionales creados correctamente");
 
             // -----------------------------
             // 5️⃣ Reservas y relaciones

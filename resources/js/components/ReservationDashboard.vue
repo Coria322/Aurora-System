@@ -83,16 +83,16 @@ const handleCancel = async (res: any) => {
 <template>
   <div class="flex flex-col gap-4">
     <!-- Hero / Encabezado con logo -->
-    <div class="flex items-center gap-3 rounded-xl border border-sidebar-border/70 bg-white/60 p-4 dark:border-sidebar-border dark:bg-black/20">
+    <div class="flex items-center gap-3 rounded-xl border border-sidebar-border/70 bg-white/70 p-4 shadow-sm dark:border-sidebar-border dark:bg-black/30">
       <img src="/auroralogo.png" alt="Aurora" class="h-10 w-10" />
       <div>
-        <h2 class="text-lg font-semibold">Bienvenido a tu panel</h2>
-        <p class="text-sm text-muted-foreground">Gestiona tus reservas de forma sencilla</p>
+        <h2 class="text-lg font-semibold">Panel de reservas</h2>
+        <p class="text-sm text-muted-foreground">Revisa tu reserva activa y el historial reciente</p>
       </div>
     </div>
 
     <!-- Tarjeta de Reserva Activa -->
-    <div class="rounded-xl border border-sidebar-border/70 bg-white/60 p-4 dark:border-sidebar-border dark:bg-black/20">
+    <div class="rounded-xl border border-sidebar-border/70 bg-white/70 p-4 shadow-sm dark:border-sidebar-border dark:bg-black/30">
       <h3 class="mb-3 text-base font-semibold">Reserva activa</h3>
       <div v-if="activeReservation" class="grid grid-cols-1 gap-3 md:grid-cols-3">
         <div class="rounded-lg bg-white/70 p-3 shadow-sm dark:bg-black/30">
@@ -107,12 +107,21 @@ const handleCancel = async (res: any) => {
           <div class="text-xs text-muted-foreground">Total</div>
           <div class="text-sm">{{ formatCurrency(activeReservation.total) }}</div>
         </div>
+        <div class="md:col-span-3 rounded-lg bg-white/70 p-3 shadow-sm dark:bg-black/30">
+          <div class="text-xs text-muted-foreground">Habitación</div>
+          <div class="text-sm">
+            {{ activeReservation?.detalleReservas?.[0]?.habitacion?.numero_habitacion || '-' }}
+            <span class="text-xs text-muted-foreground">
+              · {{ activeReservation?.detalleReservas?.[0]?.habitacion?.tipo_habitacion?.nombre || '—' }}
+            </span>
+          </div>
+        </div>
       </div>
       <div v-else class="text-sm text-muted-foreground">No tienes una reserva activa en este momento.</div>
     </div>
 
     <!-- Tabla de Reservas -->
-    <div class="rounded-xl border border-sidebar-border/70 bg-white/60 p-4 dark:border-sidebar-border dark:bg-black/20">
+    <div class="rounded-xl border border-sidebar-border/70 bg-white/70 p-4 shadow-sm dark:border-sidebar-border dark:bg-black/30">
       <div class="mb-3 flex flex-col gap-3 md:flex-row md:items-end md:justify-between">
         <h3 class="text-base font-semibold">Tus reservas</h3>
         <div class="flex flex-col gap-2 md:flex-row md:items-center">
@@ -137,7 +146,7 @@ const handleCancel = async (res: any) => {
       </div>
       <div class="overflow-x-auto rounded-lg">
         <table class="min-w-full text-left text-sm">
-          <thead class="bg-gray-50 text-xs uppercase text-gray-500 dark:bg-white/10 dark:text-gray-300">
+          <thead class="sticky top-0 bg-gray-50 text-xs uppercase text-gray-500 dark:bg-white/10 dark:text-gray-300">
             <tr>
               <th class="px-3 py-2">#</th>
               <th class="px-3 py-2">Check-In</th>
@@ -149,12 +158,15 @@ const handleCancel = async (res: any) => {
             </tr>
           </thead>
           <tbody>
-            <tr v-for="res in filteredReservations" :key="res.id_reserva" class="border-t border-gray-200/60 hover:bg-gray-50/80 dark:border-white/10 dark:hover:bg-white/5">
+            <tr v-if="filteredReservations.length === 0">
+              <td colspan="7" class="px-3 py-6 text-center text-sm text-muted-foreground">No hay reservas que coincidan con los filtros.</td>
+            </tr>
+            <tr v-for="res in filteredReservations" :key="res.id_reserva" class="border-t border-gray-200/60 odd:bg-white/40 hover:bg-gray-50/80 dark:border-white/10 dark:odd:bg-white/5 dark:hover:bg-white/10">
               <td class="px-3 py-2">RES-{{ String(res.id_reserva).padStart(6, '0') }}</td>
               <td class="px-3 py-2">{{ formatDate(res.fecha_checkin) }}</td>
               <td class="px-3 py-2">{{ formatDate(res.fecha_checkout) }}</td>
               <td class="px-3 py-2">
-                <span class="rounded-full px-2 py-0.5 text-xs"
+                <span class="rounded-full px-2 py-0.5 text-[11px] uppercase tracking-wide"
                   :class="{
                     'bg-yellow-100 text-yellow-700': res.estado === 'pendiente',
                     'bg-emerald-100 text-emerald-700': res.estado === 'confirmada',

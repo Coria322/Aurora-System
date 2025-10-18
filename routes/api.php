@@ -117,6 +117,13 @@ Route::middleware(['auth:sanctum'])->group(function () {
         ->name('api.reservas.index');
 
     /**
+     * Obtener la reserva activa más reciente
+     * GET /api/reservas/activa
+     */
+    Route::get('/reservas/activa', [ReservationController::class, 'active'])
+        ->name('api.reservas.activa');
+
+    /**
      * Obtener una reserva específica
      * GET /api/reservas/{reserva}
      */

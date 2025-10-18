@@ -55,6 +55,10 @@ export function useReservationModal() {
   const roomTypes = ref<RoomType[]>([])
   const availabilityData = ref<any | null>(null)
 
+  // Reservas del usuario
+  const userReservations = ref<any[]>([])
+  const activeReservation = ref<any | null>(null)
+
   // Días de la semana
   const weekDays = ['Dom', 'Lun', 'Mar', 'Mie', 'Jue', 'Vie', 'Sab']
 
@@ -307,6 +311,66 @@ const cargarTiposHabitaciones = async () => {
     }
   }
 
+  const loadUserReservations = async () => {
+    try {
+      const response = await api.get('/reservas')
+      if (response.data.success) {
+        userReservations.value = response.data.data
+      }
+    } catch (error) {
+      console.error('Error cargando reservas de usuario:', error)
+      showNotification('error', 'No se pudieron cargar tus reservas')
+    }
+  }
+
+  const loadActiveReservation = async () => {
+    try {
+      const response = await api.get('/reservas/activa')
+      if (response.data.success) {
+        activeReservation.value = response.data.data
+      }
+    } catch (error) {
+      console.error('Error cargando reserva activa:', error)
+      showNotification('error', 'No se pudo cargar tu reserva activa')
+    }
+  }
+
+  const getReservationById = async (id: number | string) => {
+    try {
+      const response = await api.get(`/reservas/${id}`)
+      if (response.data.success) {
+        return response.data.data
+      }
+      return null
+    } catch (error) {
+      console.error('Error obteniendo reserva:', error)
+      showNotification('error', 'No se pudo cargar la reserva')
+      return null
+    }
+  }
+
+  const cancelReservation = async (id: number | string) => {
+    try {
+      const response = await api.patch(`/reservas/${id}/cancel`)
+      if (response.data.success) {
+        showNotification('success', 'Reserva cancelada exitosamente')
+        // Refrescar listas
+        await Promise.all([
+          loadUserReservations(),
+          loadActiveReservation()
+        ])
+        return true
+      }
+      showNotification('error', response.data.message || 'No se pudo cancelar la reserva')
+      return false
+    } catch (error: any) {
+      console.error('Error cancelando reserva:', error)
+      const message = error.response?.data?.message || 'No se pudo cancelar la reserva'
+      showNotification('error', message)
+      return false
+    }
+  }
+
   const resetForm = () => {
     checkInDate.value = ''
     checkOutDate.value = ''
@@ -337,6 +401,8 @@ const cargarTiposHabitaciones = async () => {
     huespedData,
     roomTypes,
     availabilityData,
+    userReservations,
+    activeReservation,
     weekDays,
     calendarDates,
     
@@ -352,6 +418,10 @@ const cargarTiposHabitaciones = async () => {
     cargarTiposHabitaciones,
     buscarDisponibilidad,
     crearReserva,
+    loadUserReservations,
+    loadActiveReservation,
+    getReservationById,
+    cancelReservation,
     resetForm
   }
 }

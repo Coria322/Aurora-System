@@ -384,7 +384,8 @@ class ReservationController extends Controller
                     'nombre' => 'string|max:50',
                     'apellido_paterno' => 'string|max:50',
                     'apellido_materno' => 'nullable|string|max:50',
-                    'telefono' => 'nullable|numeric|max:10',
+                    // Teléfono: entre 7 y 10 dígitos numéricos (sin espacios ni guiones)
+                    'telefono' => 'nullable|string|regex:/^[0-9]{7,10}$/',
                     'email' => 'email|max:100',
                 ]);
 

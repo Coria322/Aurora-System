@@ -77,7 +77,7 @@ const props = defineProps<{
 const detalleImagen = (imagen?: string) => {
     if (!imagen) return '/images/Servicios/servicio_generico.png'
     
-    const base = '/images/Servicios/Detalle'
+    const base = '/images/Servicios/Detalle/'
     
     // Extraer solo el nombre del archivo si es una URL absoluta
     let nombreArchivo = imagen

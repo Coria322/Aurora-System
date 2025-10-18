@@ -22,7 +22,7 @@ class HuespedFactory extends Factory
             'fecha_nacimiento' => $this->faker->date('Y-m-d', '-18 years'),
             'direccion' => substr($this->faker->address(),20),
             'ciudad' => $this->faker->city(),
-            'pais' => $this->faker->country(),
+            'pais' => mb_substr($this->faker->country(), 0, 50),
         ];
     }
 }

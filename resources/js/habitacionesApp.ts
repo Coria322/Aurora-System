@@ -2,7 +2,6 @@ import { createApp } from 'vue'
 import '../css/Landing/carousel-habitaciones.css'
 import '../css/app.css'
 
-//TODO REPARAR LOS ESTILOS QUE NO SE APLICAN
 import HabitacionModal from './components/Habitacionmodal.vue'
 import { useHabitaciones } from './composables/useHabitaciones'
 

@@ -29,7 +29,8 @@ Route::middleware('auth:sanctum')->get('/user', function (Request $request) {
 |
 */
 
-Route::middleware(['auth:sanctum'])->group(function () {
+// Usamos sesión web + auth para integrarnos con Inertia sin tokens Sanctum
+Route::middleware(['web', 'auth'])->group(function () {
     
     /*
     |--------------------------------------------------------------------------
@@ -115,6 +116,13 @@ Route::middleware(['auth:sanctum'])->group(function () {
      */
     Route::get('/reservas', [ReservationController::class, 'index'])
         ->name('api.reservas.index');
+
+    /**
+     * Obtener la reserva activa más reciente
+     * GET /api/reservas/activa
+     */
+    Route::get('/reservas/activa', [ReservationController::class, 'active'])
+        ->name('api.reservas.activa');
 
     /**
      * Obtener una reserva específica

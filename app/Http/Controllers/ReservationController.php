@@ -53,6 +53,35 @@ class ReservationController extends Controller
     }
 
     /**
+     * Obtener la reserva activa más reciente del usuario autenticado
+     */
+    public function active(): JsonResponse
+    {
+        $userId = Auth::id();
+        $now = Carbon::now();
+
+        $reserva = Reserva::where('id_usuario', $userId)
+            ->where(function ($query) use ($now) {
+                $query
+                    // Reserva en curso por fechas
+                    ->where(function ($q) use ($now) {
+                        $q->whereDate('fecha_checkin', '<=', $now)
+                          ->whereDate('fecha_checkout', '>=', $now);
+                    })
+                    // O bien reservas próximas/pendientes
+                    ->orWhereIn('estado', ['pendiente', 'confirmada']);
+            })
+            ->with(['huesped', 'detalleReservas.habitacion.tipoHabitacion'])
+            ->orderBy('fecha_checkin', 'desc')
+            ->first();
+
+        return response()->json([
+            'success' => true,
+            'data' => $reserva
+        ]);
+    }
+
+    /**
      * Cancelar una reserva
      */
     public function cancel(Reserva $reserva): JsonResponse
@@ -355,7 +384,8 @@ class ReservationController extends Controller
                     'nombre' => 'string|max:50',
                     'apellido_paterno' => 'string|max:50',
                     'apellido_materno' => 'nullable|string|max:50',
-                    'telefono' => 'nullable|numeric|max:10',
+                    // Teléfono: entre 7 y 10 dígitos numéricos (sin espacios ni guiones)
+                    'telefono' => 'nullable|string|regex:/^[0-9]{7,10}$/',
                     'email' => 'email|max:100',
                 ]);
 

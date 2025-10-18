@@ -1,11 +1,10 @@
 <?php
 
+use App\Http\Controllers\landingController;
 use Illuminate\Support\Facades\Route;
 use Inertia\Inertia;
 
-Route::get('/', function () {
-    return Inertia::render('Welcome');
-})->name('home');
+Route::get('/',[landingController::class, 'showHome'])->name('home');
 
 Route::get('dashboard', function () {
     return Inertia::render('Dashboard');

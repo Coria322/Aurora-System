@@ -1,0 +1,62 @@
+@import './nav.css';
+@import './landingbanner.css';
+@import './carousel-habitaciones.css';
+@import './carousel-servicios.css';
+
+/*
+    Variables globales
+*/
+:root {
+    /* COLORES */
+    --color-on-primary: #fff;
+    --color-on-secondary: #000;
+    --color-primary: #113f67;
+    --color-secondary: #34699A;
+    --color-secondary-var: #58A0C8;
+    --color-of-sand: #fdf5AA;
+    --color-bg: #fafafa;
+    --color-error: #d32f2f;
+
+    /* FUENTES */
+    --font-title: 'EB Garamond', serif;
+    /* Se agrega 'serif' como fallback */
+    --font-text: 'Rubik', sans-serif;
+    /* Se agrega 'sans-serif' como fallback */
+
+    /* TAMAÑOS */
+    --small: 15px;
+    --mid: 20px;
+    --logo-text: 25px;
+    --title: 30px;
+}
+
+body {
+    background-color: var(--color-secondary-var);
+}
+
+/*---------- SECCION HABITACIONES -----------------*/
+.landing__title {
+    text-align:left;            /* centra el texto horizontalmente */
+    font-family: var(--font-title);
+    font-size: 2rem;
+    color: white;                  /* texto blanco */
+    background-color: var(--color-primary);        /* color de la barra */
+    display: inline-block;         /* para que la barra tenga el tamaño del texto */
+    padding: 3px 30px;            /* espacio arriba/abajo y lados */
+    border-radius: 5px;            /* opcional: bordes redondeados */
+    margin: 20px 0;                /* espacio arriba y abajo del título */
+    width: 100%;
+}
+
+section{
+    padding: 2%;
+}
+
+#inicio{
+    padding: 0;
+}
+
+footer{
+    padding: 2%;
+    background-color: var(--color-secondary);
+}

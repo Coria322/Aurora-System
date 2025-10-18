@@ -10,9 +10,18 @@ interface Props {
 }
 
 const handleLogout = () => {
-    router.flushAll();
+    router.post(route('logout'), {}, {
+        preserveState: false,
+        onBefore: () => {
+            // Opcional: cerrar el dropdown antes del logout
+            return true;
+        },
+        onFinish: () => {
+            // Forzar recarga completa ignorando el caché
+            window.location.replace('/');
+        }
+    });
 };
-
 defineProps<Props>();
 </script>
 

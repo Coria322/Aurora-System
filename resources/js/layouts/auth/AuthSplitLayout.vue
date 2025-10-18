@@ -17,13 +17,13 @@ defineProps<{
         <div class="relative flex h-full flex-col p-10 text-white">
             <!-- Panel izquierdo color plano -->
             <div class="absolute inset-0 bg-[#34699A]" />
-            <Link :href="route('home')" class="relative z-20 flex items-center">
-                <img src="/auroralogo.png" alt="Aurora" class="mr-4 size-[72px] rounded-full bg-white/10 p-1" />
+            <a :href="route('home')" class="relative z-20 flex items-center">
+                <img src="/images/auroralogo.png" alt="Aurora" class="mr-4 size-[72px] rounded-full bg-white/10 p-1" />
                 <div class="leading-tight">
                     <span class="block text-[25px] font-[700]" style="font-family: 'EB Garamond', serif;">AURORA </span>
                     <span class="block -mt-1 text-[25px] font-[400] text-white/95" style="font-family: 'EB Garamond', serif;">Suites &amp; Resorts</span>
                 </div>
-            </Link>
+            </a>
             <div class="relative z-20 mt-auto">
                 <p class="text-[20px] md:text-[28px] italic text-white" style="font-family: 'Rubik', sans-serif;">Un hotel para ti. Donde cada amanecer es un lujo</p>
             </div>

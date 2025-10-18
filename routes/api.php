@@ -29,7 +29,8 @@ Route::middleware('auth:sanctum')->get('/user', function (Request $request) {
 |
 */
 
-Route::middleware(['auth:sanctum'])->group(function () {
+// Usamos sesión web + auth para integrarnos con Inertia sin tokens Sanctum
+Route::middleware(['web', 'auth'])->group(function () {
     
     /*
     |--------------------------------------------------------------------------

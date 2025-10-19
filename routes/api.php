@@ -15,10 +15,6 @@ use App\Http\Controllers\ReservationController;
 |
 */
 
-Route::middleware('auth:sanctum')->get('/user', function (Request $request) {
-    return $request->user();
-});
-
 /*
 |--------------------------------------------------------------------------
 | Rutas del Sistema de Reservas

@@ -17,7 +17,7 @@ use App\Http\Controllers\ReservationController;
 
 /*
 |--------------------------------------------------------------------------
-| Rutas del Sistema de Reservas
+| Rutas del Sistema de 
 |--------------------------------------------------------------------------
 |
 | Rutas API para el manejo de reservas del hotel Aurora

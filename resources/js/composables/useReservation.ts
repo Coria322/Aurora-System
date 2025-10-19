@@ -170,7 +170,7 @@ const cargarTiposHabitaciones = async () => {
   
     console.log("fechas", checkInDate.value," ",checkOutDate.value)
     // Aquí pasamos las fechas al backend como query params
-    const response = await api.get('/habitaciones/tipos-publico', {
+    const response = await api.get('/habitaciones/tipos', {
       params: {
         fecha_inicio: checkInDate.value || null,
         fecha_fin: checkOutDate.value || null
@@ -222,7 +222,7 @@ const cargarTiposHabitaciones = async () => {
       }
       console.log(params)
 
-      const response = await api.get('/disponibilidad-test', { params })
+      const response = await api.get('reservas/disponibilidad', { params })
       
       if (response.data.success) {
         availabilityData.value = response.data
@@ -286,7 +286,7 @@ const cargarTiposHabitaciones = async () => {
         reservationData
       )
 
-      const response = await api.post('/reservas/crear-publico', reservationData)
+      const response = await api.post('/reservas/crear', reservationData)
       console.log(
         "respuesta de crear reserva",
         response

@@ -52,9 +52,10 @@ class Habitacion extends Model
         $query->where('estado', 'disponible');
     }
 
-    #[Scope] 
-    protected function Utilizables(Builder $query){
-        $query -> where('estado', '!=', 'no disponible');
+    #[Scope]
+    protected function Utilizables(Builder $query)
+    {
+        $query->where('estado', '!=', 'no disponible');
     }
 
 
@@ -88,9 +89,13 @@ class Habitacion extends Model
     {
         $query->whereDoesntHave('detalleReservas', function ($subquery) use ($fechaInicio, $fechaFin) {
             $subquery->where('fecha_inicio', '<', $fechaFin)
-                ->where('fecha_fin', '>', $fechaInicio);
+                ->where('fecha_fin', '>', $fechaInicio)
+                ->whereHas('reserva', function ($q) {
+                    $q->where('estado', '!=', 'cancelada');
+                });
         });
     }
+
 
     #[Scope]
     /**
@@ -120,5 +125,4 @@ class Habitacion extends Model
     {
         $query->where('id_tipo_habitacion', $id_tipo);
     }
-
 }

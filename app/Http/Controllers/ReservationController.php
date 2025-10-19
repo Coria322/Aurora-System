@@ -55,38 +55,27 @@ class ReservationController extends Controller
     /**
      * Obtener la reserva activa más reciente del usuario autenticado
      */
-    public function active(): JsonResponse
-    {
-        $userId = Auth::id();
-        $now = Carbon::now();
+public function active(): JsonResponse
+{
+    $reserva = Reserva::deUsuario(Auth::id())
+        ->activas()
+        ->enCursoOProximas()
+        ->with(['huesped', 'detalleReservas.habitacion.tipoHabitacion'])
+        ->orderBy('fecha_checkin', 'desc')
+        ->first();
 
-        $reserva = Reserva::where('id_usuario', $userId)
-            ->where(function ($query) use ($now) {
-                $query
-                    // Reserva en curso por fechas
-                    ->where(function ($q) use ($now) {
-                        $q->whereDate('fecha_checkin', '<=', $now)
-                          ->whereDate('fecha_checkout', '>=', $now);
-                    })
-                    // O bien reservas próximas/pendientes
-                    ->orWhereIn('estado', ['pendiente', 'confirmada']);
-            })
-            ->with(['huesped', 'detalleReservas.habitacion.tipoHabitacion'])
-            ->orderBy('fecha_checkin', 'desc')
-            ->first();
+    return response()->json([
+        'success' => true,
+        'data' => $reserva
+    ]);
+}
 
-        return response()->json([
-            'success' => true,
-            'data' => $reserva
-        ]);
-    }
 
     /**
      * Cancelar una reserva
      */
     public function cancel(Reserva $reserva): JsonResponse
     {
-        // Verificar que la reserva pertenece al usuario autenticado
         if ($reserva->id_usuario !== Auth::id()) {
             return response()->json([
                 'success' => false,
@@ -94,7 +83,6 @@ class ReservationController extends Controller
             ], 403);
         }
 
-        // Solo permitir cancelar si está pendiente o confirmada
         if (!in_array($reserva->estado, ['pendiente', 'confirmada'])) {
             return response()->json([
                 'success' => false,
@@ -102,18 +90,37 @@ class ReservationController extends Controller
             ], 400);
         }
 
-        // Liberar la habitación
-        foreach ($reserva->detalleReservas as $detalle) {
-            $detalle->habitacion->update(['estado' => 'disponible']);
+        try {
+            DB::transaction(function () use ($reserva) {
+                // Cargar relaciones necesarias
+                $reserva->load('detalleReservas.habitacion');
+
+                // Liberar habitaciones asociadas
+                foreach ($reserva->detalleReservas as $detalle) {
+                    if ($detalle->habitacion) {
+                        $detalle->habitacion->update(['estado' => 'disponible']);
+                    }
+                }
+
+                // Cambiar estado de la reserva
+                $reserva->update(['estado' => 'cancelada']);
+            });
+
+            // Recargar con relaciones para respuesta
+            $reserva->load(['detalleReservas.habitacion.tipoHabitacion', 'huesped']);
+
+            return response()->json([
+                'success' => true,
+                'message' => 'Reserva cancelada exitosamente',
+                'data' => $reserva
+            ]);
+        } catch (\Exception $e) {
+            Log::error('Error al cancelar reserva: ' . $e->getMessage());
+            return response()->json([
+                'success' => false,
+                'message' => 'Error interno al cancelar la reserva'
+            ], 500);
         }
-
-        $reserva->update(['estado' => 'cancelada']);
-
-        return response()->json([
-            'success' => true,
-            'message' => 'Reserva cancelada exitosamente',
-            'data' => $reserva
-        ]);
     }
 
     /**
@@ -215,7 +222,7 @@ class ReservationController extends Controller
         }
 
         // Obtener tipo de habitación para cálculos
-        $tipoHabitacion = TipoHabitacion::find($validated['tipo_habitacion_id']);
+        $tipoHabitacion = TipoHabitacion::porTipoId($validated['tipo_habitacion_id']);
 
         // Crear o encontrar el huésped
         $huesped = Huesped::firstOrCreate(

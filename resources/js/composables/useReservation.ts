@@ -1,6 +1,13 @@
 import { ref, computed } from 'vue'
 import axios from 'axios'
 
+// ============================================
+// ESTADO GLOBAL COMPARTIDO (fuera de la función)
+// ============================================
+const globalUserReservations = ref<any[]>([])
+const globalActiveReservation = ref<any | null>(null)
+let isLoadingReservationsGlobal = false
+
 export function useReservationModal() {
   // Configuración de axios
   const api = axios.create({
@@ -56,9 +63,11 @@ export function useReservationModal() {
   const roomTypes = ref<RoomType[]>([])
   const availabilityData = ref<any | null>(null)
 
-  // Reservas del usuario
-  const userReservations = ref<any[]>([])
-  const activeReservation = ref<any | null>(null)
+  // ============================================
+  // USAR REFERENCIAS GLOBALES (computed para reactividad)
+  // ============================================
+  const userReservations = computed(() => globalUserReservations.value)
+  const activeReservation = computed(() => globalActiveReservation.value)
 
   // Días de la semana
   const weekDays = ['Dom', 'Lun', 'Mar', 'Mie', 'Jue', 'Vie', 'Sab']
@@ -163,39 +172,38 @@ export function useReservationModal() {
   }
 
   // API Calls
-// Ejemplo dentro de useReservation.ts
-const cargarTiposHabitaciones = async () => {
-  try {
-    isLoadingRoomTypes.value = true
-  
-    console.log("fechas", checkInDate.value," ",checkOutDate.value)
-    // Aquí pasamos las fechas al backend como query params
-    const response = await api.get('/habitaciones/tipos', {
-      params: {
-        fecha_inicio: checkInDate.value || null,
-        fecha_fin: checkOutDate.value || null
-      }
-    })
+  const cargarTiposHabitaciones = async () => {
+    try {
+      isLoadingRoomTypes.value = true
+    
+      console.log("fechas", checkInDate.value," ",checkOutDate.value)
+      // Aquí pasamos las fechas al backend como query params
+      const response = await api.get('/habitaciones/tipos', {
+        params: {
+          fecha_inicio: checkInDate.value || null,
+          fecha_fin: checkOutDate.value || null
+        }
+      })
 
-    if (response.data.success) {
-      
-      roomTypes.value = response.data.data.map((tipo: any) => ({
-        id: tipo.id_tipo_habitacion,
-        name: tipo.nombre,
-        description: tipo.descripcion,
-        price: tipo.precio_noche,
-        capacity: tipo.capacidad_maxima,
-        available_rooms: tipo.habitaciones_disponibles,
-        services: tipo.servicios_incluidos
-      }))
+      if (response.data.success) {
+        
+        roomTypes.value = response.data.data.map((tipo: any) => ({
+          id: tipo.id_tipo_habitacion,
+          name: tipo.nombre,
+          description: tipo.descripcion,
+          price: tipo.precio_noche,
+          capacity: tipo.capacidad_maxima,
+          available_rooms: tipo.habitaciones_disponibles,
+          services: tipo.servicios_incluidos
+        }))
+      }
+    } catch (error) {
+      console.error('Error cargando tipos de habitaciones:', error)
+      showNotification('error', 'Error al cargar los tipos de habitaciones')
+    } finally {
+      isLoadingRoomTypes.value = false
     }
-  } catch (error) {
-    console.error('Error cargando tipos de habitaciones:', error)
-    showNotification('error', 'Error al cargar los tipos de habitaciones')
-  } finally {
-    isLoadingRoomTypes.value = false
   }
-}
 
   const buscarDisponibilidad = async () => {
     if (!checkInDate.value || !checkOutDate.value) {
@@ -250,6 +258,9 @@ const cargarTiposHabitaciones = async () => {
     }
   }
 
+  // ============================================
+  // MODIFICADO: Recargar datos automáticamente después de crear
+  // ============================================
   const crearReserva = async () => {
     if (!checkInDate.value || !checkOutDate.value || !selectedRoomType.value) {
       showNotification('error', 'Por favor, completa todos los campos requeridos')
@@ -282,16 +293,20 @@ const cargarTiposHabitaciones = async () => {
         telefono: huespedData.value.telefono || null
       }
 
-      console.log("datos de reserva",
-        reservationData
-      )
+      console.log("datos de reserva", reservationData)
 
       const response = await api.post('/reservas/crear', reservationData)
-      console.log(
-        "respuesta de crear reserva",
-        response
-      )
+      console.log("respuesta de crear reserva", response)
+      
       if (response.data.success) {
+        // ============================================
+        // CLAVE: Recargar automáticamente los datos globales
+        // ============================================
+        await Promise.all([
+          loadUserReservations(),
+          loadActiveReservation()
+        ])
+        
         return response.data.data
       }
     } catch (error: any) {
@@ -312,27 +327,39 @@ const cargarTiposHabitaciones = async () => {
     }
   }
 
+  // ============================================
+  // MODIFICADO: Actualizar estado global
+  // ============================================
   const loadUserReservations = async () => {
+    // Prevenir múltiples cargas simultáneas
+    if (isLoadingReservationsGlobal) return
+    
     try {
+      isLoadingReservationsGlobal = true
       const response = await api.get('/reservas')
       if (response.data.success) {
-        userReservations.value = response.data.data
+        globalUserReservations.value = response.data.data
       }
     } catch (error) {
       console.error('Error cargando reservas de usuario:', error)
       showNotification('error', 'No se pudieron cargar tus reservas')
+    } finally {
+      isLoadingReservationsGlobal = false
     }
   }
 
+  // ============================================
+  // MODIFICADO: Actualizar estado global
+  // ============================================
   const loadActiveReservation = async () => {
     try {
       const response = await api.get('/reservas/activa')
       if (response.data.success) {
-        activeReservation.value = response.data.data
+        globalActiveReservation.value = response.data.data
       }
     } catch (error) {
       console.error('Error cargando reserva activa:', error)
-      showNotification('error', 'No se pudo cargar tu reserva activa')
+      // No mostrar notificación aquí, puede ser normal no tener reserva activa
     }
   }
 
@@ -350,12 +377,16 @@ const cargarTiposHabitaciones = async () => {
     }
   }
 
+  // ============================================
+  // MODIFICADO: Recargar automáticamente después de cancelar
+  // ============================================
   const cancelReservation = async (id: number | string) => {
     try {
       const response = await api.patch(`/reservas/${id}/cancel`)
       if (response.data.success) {
         showNotification('success', 'Reserva cancelada exitosamente')
-        // Refrescar listas
+        
+        // Refrescar listas globales
         await Promise.all([
           loadUserReservations(),
           loadActiveReservation()

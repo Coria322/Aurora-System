@@ -50,7 +50,23 @@ class TipoHabitacion extends Model
     }
 
     #[Scope] 
+    /**
+     * Summary of Inactivas
+     * @param \Illuminate\Database\Eloquent\Builder $query
+     * @return void
+     */
     protected function Inactivas(Builder $query){
         $query -> whereNot('activo', true);
+    }
+
+    #[Scope] 
+    /**
+     * Summary of porTipoId
+     * @param \Illuminate\Database\Eloquent\Builder $query
+     * @param int $id
+     * @return void
+     */
+    protected function porTipoId(Builder $query, int $id){
+        $query -> find($id);
     }
 }

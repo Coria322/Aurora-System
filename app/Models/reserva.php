@@ -2,6 +2,8 @@
 
 namespace App\Models;
 
+use Illuminate\Database\Eloquent\Builder;
+use Illuminate\Database\Eloquent\Attributes\Scope;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 
@@ -62,5 +64,32 @@ class Reserva extends Model
     public function checkInOuts()
     {
         return $this->hasMany(check_in_out::class, 'id_reserva', 'id_reserva');
+    }
+
+    #[Scope]
+    protected function deUsuario(Builder $query, string $userId)
+    {
+        $query->where('id_usuario', $userId);
+    }
+
+
+    #[Scope]
+    protected function activas(Builder $query)
+    {
+        $query->where('estado', '!=', 'cancelada');
+    }
+
+    #[Scope]
+    protected function enCursoOProximas(Builder $query)
+    {
+        $now = now();
+
+        $query->where(function ($q) use ($now) {
+            $q->where(function ($sub) use ($now) {
+                $sub->whereDate('fecha_checkin', '<=', $now)
+                    ->whereDate('fecha_checkout', '>=', $now);
+            })
+                ->orWhereIn('estado', ['pendiente', 'confirmada']);
+        });
     }
 }

@@ -9,194 +9,131 @@ use App\Http\Controllers\ReservationController;
 | API Routes
 |--------------------------------------------------------------------------
 |
-| Here is where you can register API routes for your application. These
-| routes are loaded by the RouteServiceProvider and all of them will
-| be assigned to the "api" middleware group. Make something great!
+| Aquí se registran todas las rutas API de la aplicación.
+| Se agrupan en rutas protegidas (con autenticación) y públicas.
 |
 */
 
-Route::middleware('auth:sanctum')->get('/user', function (Request $request) {
-    return $request->user();
-});
+// ----------------------------------------------------------------------
+// Rutas protegidas (middleware: web + auth) - Gestión de reservas
+// ----------------------------------------------------------------------
+Route::middleware(['web', 'auth'])->group(function () {
 
-/*
-|--------------------------------------------------------------------------
-| Rutas del Sistema de Reservas
-|--------------------------------------------------------------------------
-|
-| Rutas API para el manejo de reservas del hotel Aurora
-| Todas las rutas están protegidas por middleware de autenticación
-|
-*/
+    // ------------------------------------------------------------------
+    // Disponibilidad de habitaciones
+    // ------------------------------------------------------------------
 
-Route::middleware(['auth:sanctum'])->group(function () {
-    
-    /*
-    |--------------------------------------------------------------------------
-    | Endpoints de Disponibilidad
-    |--------------------------------------------------------------------------
-    */
-    
     /**
-     * Verificar disponibilidad de habitaciones
      * GET /api/reservas/disponibilidad
-     * 
+     * Verifica disponibilidad de habitaciones para un rango de fechas.
      * Parámetros:
-     * - fecha_inicio (required): Fecha de inicio en formato Y-m-d
-     * - fecha_fin (required): Fecha de fin en formato Y-m-d
-     * - tipo_habitacion (optional): ID del tipo de habitación
-     * 
+     *  - fecha_inicio (required) : Fecha inicial (Y-m-d)
+     *  - fecha_fin (required)    : Fecha final (Y-m-d)
+     *  - tipo_habitacion (optional) : ID del tipo de habitación
      * Respuesta:
-     * - disponible: boolean
-     * - tipos_disponibles: array con información de tipos disponibles
-     * - total_habitaciones_disponibles: número total
+     *  - disponible : boolean
+     *  - tipos_disponibles : array de tipos disponibles
+     *  - total_habitaciones_disponibles : int
      */
     Route::get('/reservas/disponibilidad', [ReservationController::class, 'verificarDisponibilidad'])
         ->name('api.reservas.disponibilidad');
 
-    /*
-    |--------------------------------------------------------------------------
-    | Endpoints de Creación de Reservas
-    |--------------------------------------------------------------------------
-    */
-    
+    // ------------------------------------------------------------------
+    // Creación de reservas
+    // ------------------------------------------------------------------
+
     /**
-     * Crear nueva reserva
      * POST /api/reservas/crear
-     * 
+     * Crea una nueva reserva.
      * Parámetros:
-     * - fecha_inicio (required): Fecha de inicio
-     * - fecha_fin (required): Fecha de fin
-     * - tipo_habitacion_id (required): ID del tipo de habitación
-     * - usuario_id (required): ID del usuario que hace la reserva
-     * - cantidad_personas (required): Número de personas
-     * - nombre_huesped (required): Nombre del huésped
-     * - apellido_paterno (required): Apellido paterno
-     * - apellido_materno (optional): Apellido materno
-     * - email_huesped (required): Email del huésped
-     * - telefono_huesped (optional): Teléfono del huésped
-     * - observaciones (optional): Observaciones adicionales
-     * 
+     *  - fecha_inicio, fecha_fin, tipo_habitacion_id, usuario_id, cantidad_personas
+     *  - nombre_huesped, apellido_paterno, apellido_materno?, email_huesped
+     *  - telefono_huesped?, observaciones?
      * Respuesta:
-     * - success: boolean
-     * - reserva_id: ID de la reserva creada
-     * - data: información completa de la reserva
+     *  - success : boolean
+     *  - reserva_id : int
+     *  - data : información completa de la reserva
      */
     Route::post('/reservas/crear', [ReservationController::class, 'crearReserva'])
         ->name('api.reservas.crear');
 
-    /*
-    |--------------------------------------------------------------------------
-    | Endpoints de Información de Habitaciones
-    |--------------------------------------------------------------------------
-    */
-    
     /**
-     * Listar tipos de habitaciones con precios
+     * POST /api/reservas/crear-publico
+     * Crea una reserva desde el sistema público (con autenticación mínima).
+     */
+    Route::post('/reservas/crear-publico', [ReservationController::class, 'crearPublico'])
+        ->name('api.reservas.crear-publico');
+
+    // ------------------------------------------------------------------
+    // Información de tipos de habitaciones
+    // ------------------------------------------------------------------
+
+    /**
      * GET /api/habitaciones/tipos
-     * 
+     * Lista todos los tipos de habitaciones con su disponibilidad y precio.
      * Respuesta:
-     * - success: boolean
-     * - data: array con tipos de habitaciones
-     * - total_tipos: número total de tipos
+     *  - success : boolean
+     *  - data : array de tipos de habitaciones
+     *  - total_tipos : int
      */
     Route::get('/habitaciones/tipos', [ReservationController::class, 'listarTiposHabitaciones'])
         ->name('api.habitaciones.tipos');
 
-    /*
-    |--------------------------------------------------------------------------
-    | Endpoints de Gestión de Reservas Existentes
-    |--------------------------------------------------------------------------
-    */
-    
+    // ------------------------------------------------------------------
+    // Gestión de reservas existentes
+    // ------------------------------------------------------------------
+
     /**
-     * Obtener todas las reservas del usuario autenticado
      * GET /api/reservas
+     * Obtiene todas las reservas del usuario autenticado.
      */
     Route::get('/reservas', [ReservationController::class, 'index'])
         ->name('api.reservas.index');
 
     /**
-     * Obtener una reserva específica
+     * GET /api/reservas/activa
+     * Obtiene la reserva activa más reciente del usuario.
+     */
+    Route::get('/reservas/activa', [ReservationController::class, 'active'])
+        ->name('api.reservas.activa');
+
+    /**
      * GET /api/reservas/{reserva}
+     * Obtiene los detalles de una reserva específica.
      */
     Route::get('/reservas/{reserva}', [ReservationController::class, 'show'])
         ->name('api.reservas.show');
 
     /**
-     * Cancelar una reserva
      * PATCH /api/reservas/{reserva}/cancel
+     * Cancela una reserva (si está pendiente o confirmada).
      */
     Route::patch('/reservas/{reserva}/cancel', [ReservationController::class, 'cancel'])
         ->name('api.reservas.cancel');
 
 });
 
-/*
-|--------------------------------------------------------------------------
-| Rutas Públicas (Sin Autenticación)
-|--------------------------------------------------------------------------
-|
-| Rutas que no requieren autenticación para consultas básicas
-|
-*/
+// ----------------------------------------------------------------------
+// Rutas públicas (sin autenticación)
+// ----------------------------------------------------------------------
 
 /**
- * Listar tipos de habitaciones (público)
  * GET /api/habitaciones/tipos-publico
- * 
- * Versión pública para mostrar tipos de habitaciones sin autenticación
+ * Lista tipos de habitaciones disponibles públicamente.
  */
 Route::get('/habitaciones/tipos-publico', [ReservationController::class, 'listarTiposHabitaciones'])
     ->name('api.habitaciones.tipos.publico');
 
 /**
- * Verificar disponibilidad (público) - VERSIÓN FUNCIONAL
  * GET /api/reservas/disponibilidad-publico
+ * Verifica disponibilidad de habitaciones públicamente.
  */
+Route::get('/reservas/disponibilidad-publico', [ReservationController::class, 'verificarDisponibilidad'])
+    ->name('api.reservas.disponibilidad.publico');
 
 /**
- * Endpoint alternativo de disponibilidad - VERSIÓN FUNCIONAL
  * GET /api/disponibilidad-test
+ * Endpoint alternativo de prueba para verificar disponibilidad.
  */
-Route::get('/disponibilidad-test', [ReservationController::class, 'verificarDisponibilidad']);
-
-/**
- * Crear reserva pública - VERSIÓN SIMPLIFICADA
- * POST /api/reservas/crear-publico
- */
-Route::middleware(['web', 'auth'])->post('/reservas/crear-publico', [ReservationController::class, 'crearPublico']);
-
-/**
- * Endpoint de prueba simple
- * GET /api/test
- */
-Route::get('/test', function () {
-    return response()->json([
-        'success' => true,
-        'message' => 'API funcionando correctamente',
-        'timestamp' => now()
-    ]);
-});
-
-/**
- * Endpoint de prueba con modelo directo
- * GET /api/test-modelo
- */
-Route::get('/test-modelo', function () {
-    try {
-        $count = \App\Models\Habitacion::count();
-        return response()->json([
-            'success' => true,
-            'total_habitaciones' => $count,
-            'message' => 'Modelo funcionando correctamente'
-        ]);
-    } catch (\Exception $e) {
-        return response()->json([
-            'success' => false,
-            'message' => 'Error: ' . $e->getMessage(),
-            'file' => $e->getFile(),
-            'line' => $e->getLine()
-        ], 500);
-    }
-});
+Route::get('/disponibilidad-test', [ReservationController::class, 'verificarDisponibilidad'])
+    ->name('api.reservas.disponibilidad.test');

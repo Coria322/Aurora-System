@@ -1,3 +1,5 @@
+<!-- TODO Cambiar esto  -->
+
 <script setup lang="ts">
 import NavFooter from '@/components/NavFooter.vue';
 import NavMain from '@/components/NavMain.vue';

@@ -13,25 +13,26 @@ defineProps<{
 </script>
 
 <template>
-    <div class="relative grid h-dvh flex-col items-center justify-center px-8 sm:px-0 lg:max-w-none lg:grid-cols-2 lg:px-0">
-        <div class="relative hidden h-full flex-col bg-muted p-10 text-white lg:flex dark:border-r">
-            <div class="absolute inset-0 bg-zinc-900" />
-            <Link :href="route('home')" class="relative z-20 flex items-center text-lg font-medium">
-                <AppLogoIcon class="mr-2 size-8 fill-current text-white" />
-                {{ name }}
-            </Link>
-            <div v-if="quote" class="relative z-20 mt-auto">
-                <blockquote class="space-y-2">
-                    <p class="text-lg">&ldquo;{{ quote.message }}&rdquo;</p>
-                    <footer class="text-sm text-neutral-300">{{ quote.author }}</footer>
-                </blockquote>
+    <div class="relative grid h-dvh grid-cols-2 flex-col items-center justify-center px-8 sm:px-0 lg:max-w-none lg:px-0">
+        <div class="relative flex h-full flex-col p-10 text-white">
+            <!-- Panel izquierdo color plano -->
+            <div class="absolute inset-0 bg-[#34699A]" />
+            <a :href="route('home')" class="relative z-20 flex items-center">
+                <img src="/images/auroralogo.png" alt="Aurora" class="mr-4 size-[72px] rounded-full bg-white/10 p-1" />
+                <div class="leading-tight">
+                    <span class="block text-[25px] font-[700]" style="font-family: 'EB Garamond', serif;">AURORA </span>
+                    <span class="block -mt-1 text-[25px] font-[400] text-white/95" style="font-family: 'EB Garamond', serif;">Suites &amp; Resorts</span>
+                </div>
+            </a>
+            <div class="relative z-20 mt-auto">
+                <p class="text-[20px] md:text-[28px] italic text-white" style="font-family: 'Rubik', sans-serif;">Un hotel para ti. Donde cada amanecer es un lujo</p>
             </div>
         </div>
-        <div class="lg:p-8">
-            <div class="mx-auto flex w-full flex-col justify-center space-y-6 sm:w-[350px]">
+        <div class="lg:p-8 text-white/90 h-full flex items-center justify-center" style="background-color: #113F67;">
+            <div class="mx-auto flex w-full flex-col justify-center space-y-6 sm:w-[452px]" style="font-family: 'Rubik', sans-serif;">
                 <div class="flex flex-col space-y-2 text-center">
-                    <h1 class="text-xl font-medium tracking-tight" v-if="title">{{ title }}</h1>
-                    <p class="text-sm text-muted-foreground" v-if="description">{{ description }}</p>
+                    <h1 class="text-3xl font-semibold tracking-tight text-white" v-if="title">{{ title }}</h1>
+                    <p class="text-sm text-neutral-300" v-if="description">{{ description }}</p>
                 </div>
                 <slot />
             </div>

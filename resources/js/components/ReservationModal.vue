@@ -19,7 +19,12 @@ const emit = defineEmits<{
 // Estado del modal
 const isOpen = computed({
   get: () => props.open || false,
-  set: (value) => emit('update:open', value)
+  set: (value) => {
+    emit('update:open', value)
+    if (!value) { 
+      closeModal()  
+    }
+  }
 })
 
 

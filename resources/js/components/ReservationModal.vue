@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { computed, onMounted } from 'vue'
+import { computed, watch } from 'vue' // Quitar onMounted
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
@@ -26,7 +26,6 @@ const isOpen = computed({
     }
   }
 })
-
 
 // Usar el composable
 const {
@@ -59,11 +58,10 @@ const {
 
 // Función para cerrar modal
 const closeModal = () => {
-  resetForm()       // limpia el formulario
-  emit('update:open', false) // informa al padre que debe cerrar el modal
-  emit('close')     // opcional si quieres manejar el cierre de forma separada
+  resetForm()
+  emit('update:open', false)
+  emit('close')
 }
-
 
 // Función para manejar la creación de reserva
 const handleCrearReserva = async () => {
@@ -84,12 +82,12 @@ const handleCrearReserva = async () => {
   }
 }
 
-// Cargar tipos de habitaciones al montar el componente
-onMounted(() => {
-  cargarTiposHabitaciones()
+watch(() => props.open, (newValue) => {
+  if (newValue && roomTypes.value.length === 0) {
+    cargarTiposHabitaciones()
+  }
 })
 </script>
-
 <template>
   <Dialog v-model:open="isOpen">
     <DialogContent class="max-w-5xl max-h-[90vh] overflow-y-auto">

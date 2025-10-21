@@ -1,4 +1,4 @@
-import { ref, onMounted } from 'vue'
+import { ref, onMounted, onUnmounted } from 'vue'
 
 export interface Habitacion {
   id: number
@@ -38,6 +38,10 @@ export function useHabitaciones(habitacionesData: Habitacion[]) {
     document.addEventListener('keydown', (e: KeyboardEvent) => {
       if (e.key === 'Escape' && showModal.value) closeModal()
     })
+  })
+
+  onUnmounted(() => {
+    document.body.style.overflow = 'auto'
   })
 
   return {

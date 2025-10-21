@@ -1,4 +1,4 @@
-import { ref, onMounted } from 'vue'
+import { ref, onMounted, onUnmounted } from 'vue'
 
 export interface Servicio {
   id_servicio: number
@@ -39,6 +39,10 @@ export function useServicios(serviciosData: Servicio[]) {
     document.addEventListener('keydown', (e: KeyboardEvent) => {
       if (e.key === 'Escape' && showModal.value) closeModal()
     })
+  })
+
+  onUnmounted(() => {
+    document.body.style.overflow = 'auto'
   })
 
   return {

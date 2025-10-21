@@ -98,6 +98,17 @@
 .carousel-btn.next { right: 10px; }
 
 
+/* Animación suave cuando la imagen carga */
+img[data-lazy] {
+  opacity: 0;
+  transition: opacity 0.4s ease-in-out;
+}
+
+img[data-lazy].loaded {
+  opacity: 1;
+}
+
+
 /* Responsive */
 @media (max-width: 1024px) {
     .servicio__card { flex: 0 0 45%; } /* 2 cards en tablet */

@@ -86,7 +86,7 @@ const handleCancel = async (res: any) => {
   <div class="flex flex-col gap-4">
     <!-- Hero / Encabezado con logo -->
     <div class="flex items-center gap-3 rounded-xl border border-sidebar-border/70 bg-white/70 p-4 shadow-sm dark:border-sidebar-border dark:bg-black/30">
-      <img src="images/auroralogo.png" alt="Aurora" class="h-10 w-10" />
+      <img src="/images/auroralogo.png" alt="Aurora" class="h-10 w-10" />
       <div>
         <h2 class="text-lg font-semibold">Panel de reservas</h2>
         <p class="text-sm text-muted-foreground">Revisa tu reserva activa y el historial reciente</p>

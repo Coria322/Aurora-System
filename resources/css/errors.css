@@ -1,0 +1,132 @@
+@import './Landing/root.css';
+
+.err-body {
+    margin: 0;
+    font-family: 'ui-sans-serif', system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, "Noto Sans", sans-serif;
+    background-color: var(--color-primary);
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    min-height: 100vh;
+    padding: 1rem;
+    box-sizing: border-box;
+}
+
+/* Tarjeta */
+.error-card {
+    background-color: #ffffff;
+    padding: 3rem 3rem 4rem; /* más alto */
+    border-radius: 20px;
+    box-shadow: 0 12px 30px rgba(0, 0, 0, 0.25);
+    text-align: center;
+    width: 90%;
+    max-width: 500px;
+    transition: all 0.3s ease;
+}
+
+/* Código del error */
+.error-code {
+    font-size: 6rem;
+    font-weight: bold;
+    margin-bottom: 2rem;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    gap: 0.6rem;
+}
+
+.error-code img {
+    width: 85px;
+    height: 85px;
+    border-radius: 50%;
+    object-fit: cover;
+}
+
+/* Mensaje */
+.error-message {
+    font-family: 'Rubik', sans-serif;
+    font-size: 1.7rem;
+    margin-bottom: 3rem;
+    color: #4a5568;
+}
+
+/* Botón más grande y con mejor presencia */
+.error-btn {
+    background-color: var(--color-secondary);
+    color: var(--color-on-primary);
+    font-weight: bold;
+    padding: 16px 36px; /* 🔹 Más alto y ancho */
+    border-radius: 30px; /* 🔹 Curva más elegante */
+    text-decoration: none;
+    font-size: 1.1rem; /* 🔹 Letra más grande */
+    letter-spacing: 0.5px;
+    transition:
+        background-color 0.4s ease,
+        color 0.4s ease,
+        transform 0.2s ease,
+        box-shadow 0.3s ease;
+}
+
+.error-btn:hover {
+    background-color: var(--color-secondary-var);
+    color: var(--color-on-primary);
+    transform: translateY(-3px) scale(1.03); /* 🔹 Ligero zoom */
+    box-shadow: 0 6px 18px rgba(0, 0, 0, 0.25);
+}
+
+.error-btn:active {
+    transform: translateY(1px) scale(0.98);
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.15);
+}
+
+/* 🔹 Ajustes responsivos */
+@media (max-width: 768px) {
+    .error-card {
+        padding: 2.5rem 2rem 3rem;
+        border-radius: 18px;
+    }
+
+    .error-code {
+        font-size: 5rem;
+    }
+
+    .error-code img {
+        width: 70px;
+        height: 70px;
+    }
+
+    .error-message {
+        font-size: 1.4rem;
+        margin-bottom: 2.5rem;
+    }
+
+    .error-btn {
+        font-size: 1rem;
+        padding: 14px 30px;
+    }
+}
+
+@media (max-width: 480px) {
+    .error-card {
+        padding: 2rem 1.5rem 2.5rem;
+        border-radius: 15px;
+    }
+
+    .error-code {
+        font-size: 4rem;
+    }
+
+    .error-code img {
+        width: 60px;
+        height: 60px;
+    }
+
+    .error-message {
+        font-size: 1.2rem;
+    }
+
+    .error-btn {
+        padding: 12px 26px;
+        font-size: 0.95rem;
+    }
+}

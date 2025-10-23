@@ -21,7 +21,7 @@ class ReservationController extends Controller
      */
     public function index(Request $request): JsonResponse
     {
-        $porPagina = $request->input('per_page', 15);
+        $porPagina = $request->input('per_page', 5);
         $pagina = $request->input('page', 1);
 
         $reservas = Reserva::deUsuario(Auth::id())

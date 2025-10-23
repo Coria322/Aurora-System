@@ -11,7 +11,7 @@ const roomVisible = ref(false)
 // PAGINACIÓN
 const currentPage = ref(1)
 const totalPages = ref(1)
-const perPage = ref(15)
+const perPage = ref()
 
 
 export function useReservationModal() {

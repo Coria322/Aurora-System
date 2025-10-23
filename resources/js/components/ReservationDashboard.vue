@@ -14,7 +14,8 @@ const {
   totalPages,
   nextPage,
   prevPage,
-  goToPage
+  goToPage,
+  perPage
 } = useReservationModal()
 
 
@@ -92,7 +93,7 @@ const pageNumbers = computed(() => {
   const pages = []
   const total = totalPages.value
   const current = currentPage.value
-  
+
   if (total <= 7) {
     // Mostrar todas las páginas si son pocas
     for (let i = 1; i <= total; i++) {
@@ -108,7 +109,7 @@ const pageNumbers = computed(() => {
       pages.push(1, '...', current - 1, current, current + 1, '...', total)
     }
   }
-  
+
   return pages
 })
 </script>
@@ -163,6 +164,7 @@ const pageNumbers = computed(() => {
       <div class="mb-3 flex flex-col gap-3 md:flex-row md:items-end md:justify-between">
         <h3 class="text-base font-semibold">Tus reservas</h3>
         <div class="flex flex-col gap-2 md:flex-row md:items-center">
+          <!-- Filtro por estado -->
           <div class="flex items-center gap-2">
             <label class="text-xs text-muted-foreground">Estado</label>
             <select v-model="estadoFilter"
@@ -173,18 +175,32 @@ const pageNumbers = computed(() => {
               <option value="cancelada">Cancelada</option>
             </select>
           </div>
+
+          <!-- Filtro por fecha desde -->
           <div class="flex items-center gap-2">
             <label class="text-xs text-muted-foreground">Desde</label>
             <input v-model="dateFrom" type="date"
               class="rounded-md border border-gray-300 bg-white px-2 py-1 text-sm dark:border-white/10 dark:bg-black/30" />
           </div>
+
+          <!-- Filtro por fecha hasta -->
           <div class="flex items-center gap-2">
             <label class="text-xs text-muted-foreground">Hasta</label>
             <input v-model="dateTo" type="date"
               class="rounded-md border border-gray-300 bg-white px-2 py-1 text-sm dark:border-white/10 dark:bg-black/30" />
           </div>
+
+          <!-- Selector de reservas por página -->
+          <div class="flex items-center gap-2">
+            <label class="text-xs text-muted-foreground">Por página</label>
+            <select v-model="perPage" @change ="loadUserReservations(1)"
+              class="rounded-md border border-gray-300 bg-white px-2 py-1 text-sm dark:border-white/10 dark:bg-black/30">
+              <option v-for="n in [5, 10, 15, 20, 25, 50]" :key="n" :value="n">{{ n }}</option>
+            </select>
+          </div>
         </div>
       </div>
+
       <div class="overflow-x-auto rounded-lg">
         <table class="min-w-full text-left text-sm">
           <thead class="sticky top-0 bg-gray-50 text-xs uppercase text-gray-500 dark:bg-white/10 dark:text-gray-300">
@@ -241,48 +257,38 @@ const pageNumbers = computed(() => {
       </div>
 
       <!-- Controles de paginación -->
-      <div v-if="totalPages > 1" class="mt-4 flex items-center justify-between border-t border-gray-200/60 pt-4 dark:border-white/10">
+      <div v-if="totalPages > 1"
+        class="mt-4 flex items-center justify-between border-t border-gray-200/60 pt-4 dark:border-white/10">
         <div class="text-sm text-muted-foreground">
           Página {{ currentPage }} de {{ totalPages }}
         </div>
-        
+
         <div class="flex items-center gap-1">
           <!-- Botón anterior -->
-          <button
-            @click="prevPage"
-            :disabled="currentPage === 1"
-            class="rounded-md px-3 py-1.5 text-sm font-medium transition-colors"
-            :class="currentPage === 1 
-              ? 'cursor-not-allowed bg-gray-100 text-gray-400 dark:bg-white/5' 
-              : 'bg-white text-gray-700 hover:bg-gray-50 dark:bg-black/30 dark:text-gray-300 dark:hover:bg-white/10'"
-          >
+          <button @click="prevPage" :disabled="currentPage === 1"
+            class="rounded-md px-3 py-1.5 text-sm font-medium transition-colors" :class="currentPage === 1
+              ? 'cursor-not-allowed bg-gray-100 text-gray-400 dark:bg-white/5'
+              : 'bg-white text-gray-700 hover:bg-gray-50 dark:bg-black/30 dark:text-gray-300 dark:hover:bg-white/10'">
             Anterior
           </button>
 
           <!-- Números de página -->
           <template v-for="(page, idx) in pageNumbers" :key="idx">
-            <button
-              v-if="page !== '...'"
-              @click="goToPage(page as number)"
+            <button v-if="page !== '...'" @click="goToPage(page as number)"
               class="rounded-md px-3 py-1.5 text-sm font-medium transition-colors"
               :class="page === currentPage
                 ? 'bg-blue-600 text-white'
-                : 'bg-white text-gray-700 hover:bg-gray-50 dark:bg-black/30 dark:text-gray-300 dark:hover:bg-white/10'"
-            >
+                : 'bg-white text-gray-700 hover:bg-gray-50 dark:bg-black/30 dark:text-gray-300 dark:hover:bg-white/10'">
               {{ page }}
             </button>
             <span v-else class="px-2 text-gray-500">...</span>
           </template>
 
           <!-- Botón siguiente -->
-          <button
-            @click="nextPage"
-            :disabled="currentPage === totalPages"
-            class="rounded-md px-3 py-1.5 text-sm font-medium transition-colors"
-            :class="currentPage === totalPages
+          <button @click="nextPage" :disabled="currentPage === totalPages"
+            class="rounded-md px-3 py-1.5 text-sm font-medium transition-colors" :class="currentPage === totalPages
               ? 'cursor-not-allowed bg-gray-100 text-gray-400 dark:bg-white/5'
-              : 'bg-white text-gray-700 hover:bg-gray-50 dark:bg-black/30 dark:text-gray-300 dark:hover:bg-white/10'"
-          >
+              : 'bg-white text-gray-700 hover:bg-gray-50 dark:bg-black/30 dark:text-gray-300 dark:hover:bg-white/10'">
             Siguiente
           </button>
         </div>

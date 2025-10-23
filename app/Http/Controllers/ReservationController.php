@@ -19,16 +19,23 @@ class ReservationController extends Controller
     /**
      * Obtener todas las reservas del usuario autenticado
      */
-    public function index(): JsonResponse
+    public function index(Request $request): JsonResponse
     {
-        $reservas = Reserva::where('id_usuario', Auth::id())
+        $porPagina = $request->input('per_page', 15);
+        $pagina = $request->input('page', 1);
+
+        $reservas = Reserva::deUsuario(Auth::id())
             ->with(['huesped', 'detalleReservas.habitacion.tipoHabitacion'])
             ->orderBy('created_at', 'desc')
-            ->get();
+            ->paginate($porPagina, ['*'], 'page', $pagina);
 
         return response()->json([
             'success' => true,
-            'data' => $reservas
+            'data' => $reservas->items(),
+            'current_page' => $reservas->currentPage(),
+            'last_page' => $reservas->lastPage(),
+            'per_page' => $reservas->perPage(),
+            'total' => $reservas->total(),
         ]);
     }
     /**
@@ -55,20 +62,20 @@ class ReservationController extends Controller
     /**
      * Obtener la reserva activa más reciente del usuario autenticado
      */
-public function active(): JsonResponse
-{
-    $reserva = Reserva::deUsuario(Auth::id())
-        ->activas()
-        ->enCursoOProximas()
-        ->with(['huesped', 'detalleReservas.habitacion.tipoHabitacion'])
-        ->orderBy('fecha_checkin', 'desc')
-        ->first();
+    public function active(): JsonResponse
+    {
+        $reserva = Reserva::deUsuario(Auth::id())
+            ->activas()
+            ->enCursoOProximas()
+            ->with(['huesped', 'detalleReservas.habitacion.tipoHabitacion'])
+            ->orderBy('fecha_checkin', 'desc')
+            ->first();
 
-    return response()->json([
-        'success' => true,
-        'data' => $reserva
-    ]);
-}
+        return response()->json([
+            'success' => true,
+            'data' => $reserva
+        ]);
+    }
 
 
     /**

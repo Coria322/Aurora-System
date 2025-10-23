@@ -7,6 +7,7 @@ import axios from 'axios'
 const globalUserReservations = ref<any[]>([])
 const globalActiveReservation = ref<any | null>(null)
 let isLoadingReservationsGlobal = false
+const roomVisible = ref(false)
 // PAGINACIÓN
 const currentPage = ref(1)
 const totalPages = ref(1)
@@ -186,7 +187,8 @@ export function useReservationModal() {
       const response = await api.get('/habitaciones/tipos', {
         params: {
           fecha_inicio: checkInDate.value || null,
-          fecha_fin: checkOutDate.value || null
+          fecha_fin: checkOutDate.value || null,
+          Huespedes: cantidadPersonas.value || 1,
         }
       })
 
@@ -231,17 +233,19 @@ export function useReservationModal() {
 
       const params = {
         fecha_inicio: formatDateForAPI(checkInDate.value),
-        fecha_fin: formatDateForAPI(checkOutDate.value)
+        fecha_fin: formatDateForAPI(checkOutDate.value),
+        Huespedes: cantidadPersonas.value
       }
-      console.log(params)
 
       const response = await api.get('reservas/disponibilidad', { params })
-
+      cargarTiposHabitaciones()
       if (response.data.success) {
         availabilityData.value = response.data
+        console.table(response.data.tipos_disponibles)
 
         if (response.data.disponible) {
-          showNotification('success', `¡Disponible! ${response.data.total_habitaciones_disponibles} habitaciones disponibles`)
+          showNotification('success', `¡Disponible! ${response.data.total_habitaciones_disponibles} habitaciones disponibles para ${response.data.numero}`)
+          console.table(response.data)
           roomTypes.value = roomTypes.value.map(room => {
             const tipoDisponible = response.data.tipos_disponibles.find(
               (tipo: any) => tipo.id_tipo_habitacion === room.id
@@ -261,6 +265,7 @@ export function useReservationModal() {
     } finally {
       isLoadingAvailability.value = false
     }
+    roomVisible.value = true;
   }
 
   // ============================================
@@ -436,6 +441,7 @@ export function useReservationModal() {
       observaciones: ''
     }
     availabilityData.value = null
+    roomVisible.value = false
   }
 
   return {
@@ -479,7 +485,7 @@ export function useReservationModal() {
     perPage,
     goToPage,
     nextPage,
-    prevPage
-
+    prevPage,
+    roomVisible
   }
 }

@@ -25,12 +25,12 @@ class redirectType
         $ruta = match ($user->tipo_usuario){
             'admin' => 'admin.dashboard',
             'cliente' => 'dashboard',
-            'empleado' => 'empleado.dashboard',
+            'empleado' => 'employee.dashboard',
             default => 'home'
         };
 
         if(!$request -> routeIs($ruta)){
-            return redirect($ruta);
+            return redirect()->route($ruta);
         }
 
         return $next($request);

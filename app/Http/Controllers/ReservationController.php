@@ -134,12 +134,13 @@ class ReservationController extends Controller
      * Verificar disponibilidad de habitaciones - VERSIÓN SIMPLIFICADA
      * GET /api/reservas/disponibilidad
      */
-    public function verificarDisponibilidad(Request $request): JsonResponse
+    public function verificarDisponibilidad(Request $request, $huespedes = 0): JsonResponse
     {
         try {
             // Validación básica
             $fechaInicio = $request->get('fecha_inicio');
             $fechaFin = $request->get('fecha_fin');
+            $huespedes = $request->get('Huespedes');
 
             if (!$fechaInicio || !$fechaFin) {
                 return response()->json([
@@ -149,7 +150,7 @@ class ReservationController extends Controller
             }
 
             // Obtener tipos de habitaciones activas
-            $tiposDisponibles = TipoHabitacion::Activas()
+            $tiposDisponibles = TipoHabitacion::Activas()->para($huespedes)
                 ->withCount(['habitaciones' => function ($query) use ($fechaInicio, $fechaFin) {
                     $query->utilizables()->entre($fechaInicio, $fechaFin); // Solo las disponibles entre las fechas
                 }])
@@ -319,46 +320,63 @@ class ReservationController extends Controller
      * Listar tipos de habitaciones con precios
      * GET /api/habitaciones/tipos
      */
-    public function listarTiposHabitaciones(Request $request, $fecha_inicio = null, $fecha_fin = null): JsonResponse
-    {
-        try {
+public function listarTiposHabitaciones(Request $request): JsonResponse
+{
+    try {
+        $fecha_inicio = $request->query('fecha_inicio');
+        $fecha_fin = $request->query('fecha_fin');
+        $huespedes = $request->query('Huespedes');
 
-            $fecha_inicio = $request->query('fecha_inicio');
-            $fecha_fin = $request->query('fecha_fin');
-            $tiposHabitaciones = TipoHabitacion::where('activo', true)
-                ->withCount(['habitaciones' => function () use ($fecha_inicio, $fecha_fin) {
-                    Habitacion::entre($fecha_inicio ?? now()->format('Y-m-d'), $fecha_fin ?? now()->addDay()->format('Y-m-d'));
-                }])
-                ->get()
-                ->map(function ($tipo) {
-                    return [
-                        'id_tipo_habitacion'     => $tipo->id_tipo_habitacion,
-                        'nombre'                 => $tipo->nombre,
-                        'descripcion'            => $tipo->descripcion,
-                        'capacidad_maxima'       => $tipo->capacidad_maxima,
-                        'precio_noche'           => $tipo->precio_noche,
-                        'servicios_incluidos'    => $tipo->servicios_incluidos,
-                        'habitaciones_disponibles' => $tipo->habitaciones_count,
-                        'activo'                 => $tipo->activo
-                    ];
-                })
-                ->values()   // <- reindexa la colección para evitar serializar como objeto
-                ->toArray(); // <- fuerza array plano para el JSO
-
-            return response()->json([
-                'success'     => true,
-                'data'        => $tiposHabitaciones,
-                'total_tipos' => count($tiposHabitaciones)
-            ]);
-        } catch (\Exception $e) {
-            Log::error('listarTiposHabitaciones error: ' . $e->getMessage(), ['trace' => $e->getTraceAsString()]);
-
+        // Validar que venga un número válido de huéspedes
+        if (!$huespedes || !is_numeric($huespedes) || (int)$huespedes <= 0) {
             return response()->json([
                 'success' => false,
-                'message' => 'Error interno al listar tipos de habitaciones'
-            ], 500);
+                'message' => 'Número de huéspedes inválido: ' . ($huespedes ?? 'nulo') . '. Debe ser mayor a 0.'
+            ], 400);
         }
+
+        $huespedes = (int) $huespedes;
+
+        $tiposHabitaciones = TipoHabitacion::activas()
+            ->para($huespedes)
+            ->withCount(['habitaciones' => function ($query) use ($fecha_inicio, $fecha_fin) {
+                $query->entre(
+                    $fecha_inicio ?? now()->format('Y-m-d'),
+                    $fecha_fin ?? now()->addDay()->format('Y-m-d')
+                );
+            }])
+            ->get()
+            ->map(function ($tipo) {
+                return [
+                    'id_tipo_habitacion'     => $tipo->id_tipo_habitacion,
+                    'nombre'                 => $tipo->nombre,
+                    'descripcion'            => $tipo->descripcion,
+                    'capacidad_maxima'       => $tipo->capacidad_maxima,
+                    'precio_noche'           => $tipo->precio_noche,
+                    'servicios_incluidos'    => $tipo->servicios_incluidos,
+                    'habitaciones_disponibles' => $tipo->habitaciones_count,
+                    'activo'                 => $tipo->activo
+                ];
+            })
+            ->values()
+            ->toArray();
+
+        return response()->json([
+            'success'     => true,
+            'data'        => $tiposHabitaciones,
+            'total_tipos' => count($tiposHabitaciones),
+            'numero' => $huespedes
+        ]);
+
+    } catch (\Exception $e) {
+        Log::error('listarTiposHabitaciones error: ' . $e->getMessage(), ['trace' => $e->getTraceAsString()]);
+
+        return response()->json([
+            'success' => false,
+            'message' => 'Error interno al listar tipos de habitaciones'
+        ], 500);
     }
+}
 
 
     public function crearReserva(Request $request): JsonResponse

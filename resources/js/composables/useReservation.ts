@@ -7,6 +7,12 @@ import axios from 'axios'
 const globalUserReservations = ref<any[]>([])
 const globalActiveReservation = ref<any | null>(null)
 let isLoadingReservationsGlobal = false
+const roomVisible = ref(false)
+// PAGINACIÓN
+const currentPage = ref(1)
+const totalPages = ref(1)
+const perPage = ref()
+
 
 export function useReservationModal() {
   // Configuración de axios
@@ -99,13 +105,13 @@ export function useReservationModal() {
   const generateCalendarDates = () => {
     const today = new Date()
     const dates = []
-    
+
     for (let i = 0; i < 35; i++) {
       const date = new Date(today)
       date.setDate(today.getDate() + i)
       dates.push(date)
     }
-    
+
     return dates
   }
 
@@ -118,7 +124,7 @@ export function useReservationModal() {
       type,
       message
     }
-    
+
     setTimeout(() => {
       notification.value.show = false
     }, 5000)
@@ -132,11 +138,11 @@ export function useReservationModal() {
 
   const isDateInRange = (date: Date) => {
     if (!checkInDate.value || !checkOutDate.value) return false
-    
+
     const checkIn = new Date(checkInDate.value)
     const checkOut = new Date(checkOutDate.value)
     const currentDate = new Date(date)
-    
+
     return currentDate > checkIn && currentDate < checkOut
   }
 
@@ -175,18 +181,19 @@ export function useReservationModal() {
   const cargarTiposHabitaciones = async () => {
     try {
       isLoadingRoomTypes.value = true
-    
-      console.log("fechas", checkInDate.value," ",checkOutDate.value)
+
+      console.log("fechas", checkInDate.value, " ", checkOutDate.value)
       // Aquí pasamos las fechas al backend como query params
       const response = await api.get('/habitaciones/tipos', {
         params: {
           fecha_inicio: checkInDate.value || null,
-          fecha_fin: checkOutDate.value || null
+          fecha_fin: checkOutDate.value || null,
+          Huespedes: cantidadPersonas.value || 1,
         }
       })
 
       if (response.data.success) {
-        
+
         roomTypes.value = response.data.data.map((tipo: any) => ({
           id: tipo.id_tipo_habitacion,
           name: tipo.nombre,
@@ -223,20 +230,22 @@ export function useReservationModal() {
 
     try {
       isLoadingAvailability.value = true
-      
+
       const params = {
         fecha_inicio: formatDateForAPI(checkInDate.value),
-        fecha_fin: formatDateForAPI(checkOutDate.value)
+        fecha_fin: formatDateForAPI(checkOutDate.value),
+        Huespedes: cantidadPersonas.value
       }
-      console.log(params)
 
       const response = await api.get('reservas/disponibilidad', { params })
-      
+      cargarTiposHabitaciones()
       if (response.data.success) {
         availabilityData.value = response.data
-        
+        console.table(response.data.tipos_disponibles)
+
         if (response.data.disponible) {
-          showNotification('success', `¡Disponible! ${response.data.total_habitaciones_disponibles} habitaciones disponibles`)
+          showNotification('success', `¡Disponible! ${response.data.total_habitaciones_disponibles} habitaciones disponibles para ${response.data.numero}`)
+          console.table(response.data)
           roomTypes.value = roomTypes.value.map(room => {
             const tipoDisponible = response.data.tipos_disponibles.find(
               (tipo: any) => tipo.id_tipo_habitacion === room.id
@@ -256,6 +265,7 @@ export function useReservationModal() {
     } finally {
       isLoadingAvailability.value = false
     }
+    roomVisible.value = true;
   }
 
   // ============================================
@@ -274,7 +284,7 @@ export function useReservationModal() {
 
     try {
       isLoadingReservation.value = true
-      
+
       console.log(
         "fechas al reservar =",
         formatDateForAPI(checkInDate.value),
@@ -297,7 +307,7 @@ export function useReservationModal() {
 
       const response = await api.post('/reservas/crear', reservationData)
       console.log("respuesta de crear reserva", response)
-      
+
       if (response.data.success) {
         // ============================================
         // CLAVE: Recargar automáticamente los datos globales
@@ -306,12 +316,12 @@ export function useReservationModal() {
           loadUserReservations(),
           loadActiveReservation()
         ])
-        
+
         return response.data.data
       }
     } catch (error: any) {
       console.error('Error creando reserva:', error)
-      
+
       let errorMessage = 'Error al crear la reserva'
       if (error.response?.data?.message) {
         errorMessage = error.response.data.message
@@ -319,7 +329,7 @@ export function useReservationModal() {
         const errors = Object.values(error.response.data.errors).flat()
         errorMessage = errors.join(', ')
       }
-      
+
       showNotification('error', errorMessage)
       throw error
     } finally {
@@ -330,15 +340,20 @@ export function useReservationModal() {
   // ============================================
   // MODIFICADO: Actualizar estado global
   // ============================================
-  const loadUserReservations = async () => {
-    // Prevenir múltiples cargas simultáneas
+  const loadUserReservations = async (page = 1) => {
     if (isLoadingReservationsGlobal) return
-    
     try {
       isLoadingReservationsGlobal = true
-      const response = await api.get('/reservas')
+      const response = await api.get('/reservas', {
+        params: {
+          page,
+          per_page: perPage.value
+        }
+      })
       if (response.data.success) {
         globalUserReservations.value = response.data.data
+        currentPage.value = response.data.current_page
+        totalPages.value = response.data.last_page
       }
     } catch (error) {
       console.error('Error cargando reservas de usuario:', error)
@@ -347,6 +362,15 @@ export function useReservationModal() {
       isLoadingReservationsGlobal = false
     }
   }
+
+  const goToPage = async (page: number) => {
+    if (page < 1 || page > totalPages.value) return
+    await loadUserReservations(page)
+  }
+
+  const nextPage = () => goToPage(currentPage.value + 1)
+  const prevPage = () => goToPage(currentPage.value - 1)
+
 
   // ============================================
   // MODIFICADO: Actualizar estado global
@@ -385,7 +409,7 @@ export function useReservationModal() {
       const response = await api.patch(`/reservas/${id}/cancel`)
       if (response.data.success) {
         showNotification('success', 'Reserva cancelada exitosamente')
-        
+
         // Refrescar listas globales
         await Promise.all([
           loadUserReservations(),
@@ -417,6 +441,7 @@ export function useReservationModal() {
       observaciones: ''
     }
     availabilityData.value = null
+    roomVisible.value = false
   }
 
   return {
@@ -437,7 +462,7 @@ export function useReservationModal() {
     activeReservation,
     weekDays,
     calendarDates,
-    
+
     // Funciones
     showNotification,
     isDateSelected,
@@ -454,6 +479,13 @@ export function useReservationModal() {
     loadActiveReservation,
     getReservationById,
     cancelReservation,
-    resetForm
+    resetForm,
+    currentPage,
+    totalPages,
+    perPage,
+    goToPage,
+    nextPage,
+    prevPage,
+    roomVisible
   }
 }

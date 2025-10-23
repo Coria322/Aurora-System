@@ -69,4 +69,9 @@ class TipoHabitacion extends Model
     protected function porTipoId(Builder $query, int $id){
         $query -> find($id);
     }
+
+    #[Scope] 
+    protected function para(Builder $query, int $num){
+        $query->where('capacidad_maxima', '>=', $num);
+    }
 }

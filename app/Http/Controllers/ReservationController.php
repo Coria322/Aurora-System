@@ -13,6 +13,9 @@ use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Log;
 use Carbon\Carbon;
 use Illuminate\Support\Facades\DB;
+use App\Mail\ConfirmarReservaMail;
+use Illuminate\Support\Facades\Mail;
+
 
 class ReservationController extends Controller
 {
@@ -320,85 +323,84 @@ class ReservationController extends Controller
      * Listar tipos de habitaciones con precios
      * GET /api/habitaciones/tipos
      */
-public function listarTiposHabitaciones(Request $request): JsonResponse
-{
-    try {
-        $fecha_inicio = $request->query('fecha_inicio');
-        $fecha_fin = $request->query('fecha_fin');
-        $huespedes = $request->query('Huespedes');
+    public function listarTiposHabitaciones(Request $request): JsonResponse
+    {
+        try {
+            $fecha_inicio = $request->query('fecha_inicio');
+            $fecha_fin = $request->query('fecha_fin');
+            $huespedes = $request->query('Huespedes');
 
-        // Validar que venga un número válido de huéspedes
-        if (!$huespedes || !is_numeric($huespedes) || (int)$huespedes <= 0) {
+            // Validar que venga un número válido de huéspedes
+            if (!$huespedes || !is_numeric($huespedes) || (int)$huespedes <= 0) {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'Número de huéspedes inválido: ' . ($huespedes ?? 'nulo') . '. Debe ser mayor a 0.'
+                ], 400);
+            }
+
+            $huespedes = (int) $huespedes;
+
+            $tiposHabitaciones = TipoHabitacion::activas()
+                ->para($huespedes)
+                ->withCount(['habitaciones' => function ($query) use ($fecha_inicio, $fecha_fin) {
+                    $query->entre(
+                        $fecha_inicio ?? now()->format('Y-m-d'),
+                        $fecha_fin ?? now()->addDay()->format('Y-m-d')
+                    );
+                }])
+                ->get()
+                ->map(function ($tipo) {
+                    return [
+                        'id_tipo_habitacion'     => $tipo->id_tipo_habitacion,
+                        'nombre'                 => $tipo->nombre,
+                        'descripcion'            => $tipo->descripcion,
+                        'capacidad_maxima'       => $tipo->capacidad_maxima,
+                        'precio_noche'           => $tipo->precio_noche,
+                        'servicios_incluidos'    => $tipo->servicios_incluidos,
+                        'habitaciones_disponibles' => $tipo->habitaciones_count,
+                        'activo'                 => $tipo->activo
+                    ];
+                })
+                ->values()
+                ->toArray();
+
+            return response()->json([
+                'success'     => true,
+                'data'        => $tiposHabitaciones,
+                'total_tipos' => count($tiposHabitaciones),
+                'numero' => $huespedes
+            ]);
+        } catch (\Exception $e) {
+            Log::error('listarTiposHabitaciones error: ' . $e->getMessage(), ['trace' => $e->getTraceAsString()]);
+
             return response()->json([
                 'success' => false,
-                'message' => 'Número de huéspedes inválido: ' . ($huespedes ?? 'nulo') . '. Debe ser mayor a 0.'
-            ], 400);
+                'message' => 'Error interno al listar tipos de habitaciones'
+            ], 500);
         }
-
-        $huespedes = (int) $huespedes;
-
-        $tiposHabitaciones = TipoHabitacion::activas()
-            ->para($huespedes)
-            ->withCount(['habitaciones' => function ($query) use ($fecha_inicio, $fecha_fin) {
-                $query->entre(
-                    $fecha_inicio ?? now()->format('Y-m-d'),
-                    $fecha_fin ?? now()->addDay()->format('Y-m-d')
-                );
-            }])
-            ->get()
-            ->map(function ($tipo) {
-                return [
-                    'id_tipo_habitacion'     => $tipo->id_tipo_habitacion,
-                    'nombre'                 => $tipo->nombre,
-                    'descripcion'            => $tipo->descripcion,
-                    'capacidad_maxima'       => $tipo->capacidad_maxima,
-                    'precio_noche'           => $tipo->precio_noche,
-                    'servicios_incluidos'    => $tipo->servicios_incluidos,
-                    'habitaciones_disponibles' => $tipo->habitaciones_count,
-                    'activo'                 => $tipo->activo
-                ];
-            })
-            ->values()
-            ->toArray();
-
-        return response()->json([
-            'success'     => true,
-            'data'        => $tiposHabitaciones,
-            'total_tipos' => count($tiposHabitaciones),
-            'numero' => $huespedes
-        ]);
-
-    } catch (\Exception $e) {
-        Log::error('listarTiposHabitaciones error: ' . $e->getMessage(), ['trace' => $e->getTraceAsString()]);
-
-        return response()->json([
-            'success' => false,
-            'message' => 'Error interno al listar tipos de habitaciones'
-        ], 500);
     }
-}
 
 
     public function crearReserva(Request $request): JsonResponse
     {
+        // Validación básica (defaults permitidos para nombre/email)
+        $validated = $request->validate([
+            'fecha_inicio' => 'required|date|after_or_equal:today',
+            'fecha_fin' => 'required|date|after:fecha_inicio',
+            'tipo_habitacion_id' => 'required|exists:tipo_habitaciones,id_tipo_habitacion',
+            'cantidad_personas' => 'nullable|integer|min:1|max:10',
+            'nombre' => 'nullable|string|max:255',
+            'email' => 'nullable|email|max:255',
+        ]);
+
+        $fechaInicio = $validated['fecha_inicio'];
+        $fechaFin = $validated['fecha_fin'];
+        $tipoHabitacionId = $validated['tipo_habitacion_id'];
+        $cantidadPersonas = $validated['cantidad_personas'] ?? 1;
+        $nombre = $validated['nombre'];
+        $email = $validated['email'];
+
         try {
-            // Validación básica (defaults permitidos para nombre/email)
-            $validated = $request->validate([
-                'fecha_inicio' => 'required|date|after_or_equal:today',
-                'fecha_fin' => 'required|date|after:fecha_inicio',
-                'tipo_habitacion_id' => 'required|exists:tipo_habitaciones,id_tipo_habitacion',
-                'cantidad_personas' => 'nullable|integer|min:1|max:10',
-                'nombre' => 'nullable|string|max:255',
-                'email' => 'nullable|email|max:255',
-            ]);
-
-            $fechaInicio = $validated['fecha_inicio'];
-            $fechaFin = $validated['fecha_fin'];
-            $tipoHabitacionId = $validated['tipo_habitacion_id'];
-            $cantidadPersonas = $validated['cantidad_personas'] ?? 1;
-            $nombre = $validated['nombre'];
-            $email = $validated['email'];
-
             // Usar transacción para evitar race conditions al reservar la habitación
             return DB::transaction(function () use (
                 $request,
@@ -491,12 +493,40 @@ public function listarTiposHabitaciones(Request $request): JsonResponse
                 ]);
 
                 // Marcar la habitación como ocupada
+                //TODO La habitación se tiene que marcar ocupada hasta hacer check-in. para los reportes de ocupación
                 $habitacionDisponible->update(['estado' => 'ocupada']);
+
+                // Cargar relaciones necesarias antes de enviar el correo
+                $reserva->load(['huesped', 'detalleReservas.habitacion.tipoHabitacion']);
+
+                // Envío automático de correo ===
+                if ($reserva->huesped && !empty($reserva->huesped->email)) {
+                    //Si el correo del usuario y del huesped coinciden se envia un solo correo
+                    //!Esto solo funcionará configurando SMTP o si se sube con dominio para usar en la api de resend
+                    // if (Auth::user()->email == $reserva->huesped->email) {
+                    //     Mail::to($reserva->huesped->email)
+                    //         ->queue(new ConfirmarReservaMail($reserva));
+                    // } 
+                    // //En caso contrario se envía en ambas direcciones
+                    // else {
+                    //     Mail::to(Auth::user()->email)
+                    //         ->queue(new ConfirmarReservaMail($reserva));
+
+                    //     Mail::to($reserva->huesped->email)
+                    //         ->queue(new ConfirmarReservaMail($reserva));
+                    // }
+
+                    //* Esto se usa por mientras para pruebas en el desarrollo
+                    if ($reserva->huesped && !empty($reserva->huesped->email)) {
+                        //!utilicen su correo registrado en resend
+                        Mail::to('ac.sw.engineering@gmail.com');
+                    }
+                }
 
                 // Respuesta
                 return response()->json([
                     'success' => true,
-                    'message' => 'Reserva creada exitosamente',
+                    'message' => 'Reserva creada exitosamente y correo enviado',
                     'data' => [
                         'id_reserva' => $reserva->id_reserva,
                         'numero_reserva' => 'RES-' . str_pad($reserva->id_reserva, 6, '0', STR_PAD_LEFT),
